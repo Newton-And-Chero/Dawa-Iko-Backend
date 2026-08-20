@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Docker
+*.log
