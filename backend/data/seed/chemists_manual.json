@@ -1,0 +1,113 @@
+{
+  "_comment": "SYNTHETIC data for development/demo purposes only. These are NOT real chemists/pharmacies. Entries exist to exercise the manual (non-KMHFL) facility-add path, source=manual. Phone numbers use the same reserved +254700000xxx test block as the other seed files.",
+  "facilities": [
+    {
+      "name": "Baraka Chemist",
+      "facility_type": "private_chemist",
+      "county": "Kirinyaga",
+      "sub_county": "Kirinyaga Central",
+      "ward": "Kerugoya",
+      "gps_lat": -0.498618,
+      "gps_lng": 37.278122,
+      "phone_number": "+254700000094",
+      "kmhfl_code": null,
+      "source": "manual"
+    },
+    {
+      "name": "Tumaini Pharmacy",
+      "facility_type": "private_chemist",
+      "county": "Kirinyaga",
+      "sub_county": "Kirinyaga Central",
+      "ward": "Kutus",
+      "gps_lat": -0.613325,
+      "gps_lng": 37.296077,
+      "phone_number": "+254700000095",
+      "kmhfl_code": null,
+      "source": "manual"
+    },
+    {
+      "name": "Uzima Chemist",
+      "facility_type": "private_chemist",
+      "county": "Kirinyaga",
+      "sub_county": "Mwea East",
+      "ward": "Wamumu",
+      "gps_lat": -0.685796,
+      "gps_lng": 37.375715,
+      "phone_number": "+254700000096",
+      "kmhfl_code": null,
+      "source": "manual"
+    },
+    {
+      "name": "Neema Pharmacy",
+      "facility_type": "private_chemist",
+      "county": "Nairobi",
+      "sub_county": "Westlands",
+      "ward": "Parklands/Highridge",
+      "gps_lat": -1.257867,
+      "gps_lng": 36.806445,
+      "phone_number": "+254700000097",
+      "kmhfl_code": null,
+      "source": "manual"
+    },
+    {
+      "name": "Afya Bora Chemist",
+      "facility_type": "private_chemist",
+      "county": "Nairobi",
+      "sub_county": "Kibra",
+      "ward": "Laini Saba",
+      "gps_lat": -1.311164,
+      "gps_lng": 36.793513,
+      "phone_number": "+254700000098",
+      "kmhfl_code": null,
+      "source": "manual"
+    },
+    {
+      "name": "Jubilee Pharmacy",
+      "facility_type": "private_chemist",
+      "county": "Nairobi",
+      "sub_county": "Langata",
+      "ward": "South C",
+      "gps_lat": -1.309777,
+      "gps_lng": 36.835875,
+      "phone_number": "+254700000099",
+      "kmhfl_code": null,
+      "source": "manual"
+    },
+    {
+      "name": "Mercy Chemist",
+      "facility_type": "private_chemist",
+      "county": "Nairobi",
+      "sub_county": "Embakasi East",
+      "ward": "Embakasi",
+      "gps_lat": -1.310803,
+      "gps_lng": 36.904719,
+      "phone_number": "+254700000100",
+      "kmhfl_code": null,
+      "source": "manual"
+    },
+    {
+      "name": "Rehema Pharmacy",
+      "facility_type": "private_chemist",
+      "county": "Nairobi",
+      "sub_county": "Dagoretti North",
+      "ward": "Kawangware",
+      "gps_lat": -1.286823,
+      "gps_lng": 36.745676,
+      "phone_number": "+254700000101",
+      "kmhfl_code": null,
+      "source": "manual"
+    },
+    {
+      "name": "Wema Chemist",
+      "facility_type": "private_chemist",
+      "county": "Nairobi",
+      "sub_county": "Starehe",
+      "ward": "Nairobi Central",
+      "gps_lat": -1.276723,
+      "gps_lng": 36.822385,
+      "phone_number": "+254700000102",
+      "kmhfl_code": null,
+      "source": "manual"
+    }
+  ]
+}

@@ -2,7 +2,8 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    UV_HTTP_TIMEOUT=120
 
 WORKDIR /app
 

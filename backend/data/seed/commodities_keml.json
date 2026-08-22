@@ -1,0 +1,74 @@
+{
+  "_comment": "SYNTHETIC data for development/demo purposes only. This is NOT a real KEML (Kenya Essential Medicines List) export. keml_code values are fabricated placeholders, not official KEML codes.",
+  "commodities": [
+    {
+      "name": "Carbetocin",
+      "category": "essential_medicine",
+      "keml_code": "KEML-SYN-0001",
+      "aliases": [
+        "PPH drug",
+        "pitocin alternative",
+        "Duratocin",
+        "heat-stable oxytocic"
+      ],
+      "is_priority_watchlist": true
+    },
+    {
+      "name": "Tenofovir/Lamivudine/Efavirenz (TLE)",
+      "category": "essential_medicine",
+      "keml_code": "KEML-SYN-0002",
+      "aliases": [
+        "ARV",
+        "TLE 400",
+        "first-line ART",
+        "HIV drug"
+      ],
+      "is_priority_watchlist": true
+    },
+    {
+      "name": "Human Insulin (Soluble)",
+      "category": "essential_medicine",
+      "keml_code": "KEML-SYN-0003",
+      "aliases": [
+        "insulin injection",
+        "Actrapid",
+        "Humulin R"
+      ],
+      "is_priority_watchlist": true
+    },
+    {
+      "name": "Artemether/Lumefantrine",
+      "category": "essential_medicine",
+      "keml_code": "KEML-SYN-0004",
+      "aliases": [
+        "AL",
+        "Coartem",
+        "malaria drug",
+        "antimalarial"
+      ],
+      "is_priority_watchlist": true
+    },
+    {
+      "name": "Rifampicin/Isoniazid/Pyrazinamide/Ethambutol (RHZE)",
+      "category": "essential_medicine",
+      "keml_code": "KEML-SYN-0005",
+      "aliases": [
+        "TB drug",
+        "RHZE",
+        "anti-TB FDC",
+        "fixed-dose combination TB"
+      ],
+      "is_priority_watchlist": true
+    },
+    {
+      "name": "Oxytocin",
+      "category": "essential_medicine",
+      "keml_code": "KEML-SYN-0006",
+      "aliases": [
+        "Pitocin",
+        "uterotonic"
+      ],
+      "is_priority_watchlist": false
+    }
+  ]
+}

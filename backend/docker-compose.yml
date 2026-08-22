@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: calle
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -35,7 +35,33 @@ services:
     env_file:
       - .env
     volumes:
-      - .:/app
+      - .:/app:z
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: uv run celery -A app.workers.celery_app worker --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - .:/app:z
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    build: .
+    command: uv run celery -A app.workers.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    volumes:
+      - .:/app:z
     depends_on:
       db:
         condition: service_healthy

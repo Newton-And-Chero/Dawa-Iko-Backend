@@ -21,3 +21,7 @@ venv/
 
 # Docker
 *.log
+
+# Celery
+celerybeat-schedule*
+celerybeat.pid
