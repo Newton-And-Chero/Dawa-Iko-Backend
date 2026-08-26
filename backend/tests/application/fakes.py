@@ -186,6 +186,22 @@ class InMemoryAvailabilityResultRepository:
         return list(self._results.values())
 
 
+class InMemoryRealtimeEventBus:
+    """Records published events instead of touching Redis — application-layer
+    tests assert on `.published`, not on pub/sub delivery (that's covered by
+    the infrastructure-layer realtime tests)."""
+
+    def __init__(self) -> None:
+        self.published: list[tuple[str, dict[str, Any]]] = []
+
+    async def publish(self, channel: str, event: dict[str, Any]) -> None:
+        self.published.append((channel, event))
+
+    async def subscribe(self, channel: str) -> Any:
+        return
+        yield  # pragma: no cover - never actually iterated in these tests
+
+
 class InMemoryWebhookEventRepository:
     def __init__(self) -> None:
         self._seen: set[str] = set()

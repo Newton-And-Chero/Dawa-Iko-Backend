@@ -1,8 +1,10 @@
 """List/filter commodities."""
 
 from dataclasses import dataclass
+from uuid import UUID
 
 from app.application.ports.commodity_repository import CommodityRepositoryPort
+from app.core.exceptions import NotFoundError
 from app.domain.entities.commodity import Commodity
 from app.domain.enums import CommodityCategory
 
@@ -23,3 +25,9 @@ class ListCommoditiesUseCase:
         return await self._commodity_repository.list_by_filter(
             commodity_filter or CommodityFilter()
         )
+
+    async def get(self, commodity_id: UUID) -> Commodity:
+        commodity = await self._commodity_repository.get_by_id(commodity_id)
+        if commodity is None:
+            raise NotFoundError(f"commodity {commodity_id} not found")
+        return commodity

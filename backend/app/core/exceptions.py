@@ -17,6 +17,10 @@ class UnknownCallError(AppError):
     """Raised when a webhook references a call_id we have no queued/in_progress record of."""
 
 
+class InvalidCredentialsError(AppError):
+    """Raised when a login's phone_number/password pair doesn't match a user."""
+
+
 class CallProviderError(AppError):
     """Base class for CALL-E API errors. Carries the provider's own error code."""
 

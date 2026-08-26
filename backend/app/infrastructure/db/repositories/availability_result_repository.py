@@ -5,9 +5,10 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.use_cases.list_availability_results import AvailabilityResultFilter
 from app.core.exceptions import NotFoundError
 from app.domain.entities.availability_result import AvailabilityResult
-from app.infrastructure.db.models import AvailabilityResultModel
+from app.infrastructure.db.models import AvailabilityResultModel, FacilityModel
 
 
 def _to_domain(model: AvailabilityResultModel) -> AvailabilityResult:
@@ -86,4 +87,23 @@ class SqlAlchemyAvailabilityResultRepository:
 
     async def list_all(self) -> list[AvailabilityResult]:
         result = await self._session.execute(select(AvailabilityResultModel))
+        return [_to_domain(m) for m in result.scalars().all()]
+
+    async def list_by_filter(
+        self, result_filter: AvailabilityResultFilter
+    ) -> list[AvailabilityResult]:
+        stmt = select(AvailabilityResultModel)
+        if result_filter.commodity_id is not None:
+            stmt = stmt.where(AvailabilityResultModel.commodity_id == result_filter.commodity_id)
+        if result_filter.date_from is not None:
+            stmt = stmt.where(AvailabilityResultModel.created_at >= result_filter.date_from)
+        if result_filter.date_to is not None:
+            stmt = stmt.where(AvailabilityResultModel.created_at <= result_filter.date_to)
+        if result_filter.in_stock is not None:
+            stmt = stmt.where(AvailabilityResultModel.in_stock == result_filter.in_stock)
+        if result_filter.county is not None:
+            stmt = stmt.join(
+                FacilityModel, FacilityModel.id == AvailabilityResultModel.facility_id
+            ).where(FacilityModel.county == result_filter.county)
+        result = await self._session.execute(stmt)
         return [_to_domain(m) for m in result.scalars().all()]

@@ -13,6 +13,7 @@ from app.application.use_cases.run_scheduled_sweep import RunScheduledSweepUseCa
 from app.core.config import get_settings
 from app.core.exceptions import NotFoundError
 from app.domain.value_objects.geography_scope import CountyScope
+from app.infrastructure.cache.redis import get_redis
 from app.infrastructure.call_e.factory import build_call_provider
 from app.infrastructure.db.repositories.call_repository import SqlAlchemyCallRepository
 from app.infrastructure.db.repositories.commodity_repository import SqlAlchemyCommodityRepository
@@ -20,6 +21,7 @@ from app.infrastructure.db.repositories.facility_repository import SqlAlchemyFac
 from app.infrastructure.db.repositories.sweep_repository import SqlAlchemySweepRepository
 from app.infrastructure.db.session import async_session_factory
 from app.infrastructure.geo.postgis_geography_resolver import PostGISGeographyResolver
+from app.infrastructure.realtime.event_bus import RealtimeEventBus
 from app.workers.celery_app import celery_app
 
 
@@ -39,6 +41,7 @@ async def _run_scheduled_sweep(commodity_keml_code: str, county: str) -> None:
             commodity_repository=commodity_repository,
             call_provider=build_call_provider(settings),
             settings=settings,
+            realtime_event_bus=RealtimeEventBus(get_redis()),
         )
         await use_case.execute(commodity_id=commodity.id, geography=CountyScope(county=county))
 

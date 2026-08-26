@@ -28,6 +28,7 @@ from tests.application.fakes import (
     FakeGeographyResolver,
     InMemoryCallRepository,
     InMemoryCommodityRepository,
+    InMemoryRealtimeEventBus,
     InMemorySweepRepository,
 )
 
@@ -70,6 +71,7 @@ def _use_case(
         commodity_repository=setup["commodities"],
         call_provider=setup["call_provider"],
         settings=settings,
+        realtime_event_bus=InMemoryRealtimeEventBus(),
     )
 
 

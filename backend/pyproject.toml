@@ -5,12 +5,14 @@ description = "Add your description here"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.19.1",
+    "argon2-cffi>=25.1.0",
     "asyncpg>=0.31.0",
     "celery[redis]>=5.6.3",
     "fastapi>=0.141.1",
     "geoalchemy2>=0.20.0",
     "httpx>=0.28.1",
     "pydantic-settings>=2.15.0",
+    "pyjwt>=2.13.0",
     "redis>=6.4.0",
     "shapely>=2.1.2",
     "sqlalchemy[asyncio]>=2.0.52",
@@ -19,6 +21,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx-ws>=0.9.0",
     "mypy>=2.3.1",
     "pre-commit>=4.6.2",
     "pytest>=9.1.1",
@@ -32,6 +35,16 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI's DI pattern is `param: T = Depends(...)` — a function call in an
+# argument default is the framework's own idiom here, not the footgun B008
+# otherwise guards against (each request gets a fresh call, not a shared
+# mutable default). Scoped to the API layer, where every router/dependency
+# module is built on this pattern.
+"app/api/v1/routers/*.py" = ["B008"]
+"app/api/v1/dependencies.py" = ["B008"]
+"app/api/v1/rate_limit.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.12"

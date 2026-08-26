@@ -60,6 +60,13 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # --- Rate limiting (POST /v1/sweeps/query) ---
+    PUBLIC_QUERY_RATE_LIMIT: int = 10
+    PUBLIC_QUERY_RATE_WINDOW_SECONDS: int = 60
+
+    # --- CORS ---
+    CORS_ALLOW_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+
 
 @lru_cache
 def get_settings() -> Settings:

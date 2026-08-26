@@ -13,8 +13,15 @@ from uuid import UUID
 
 from app.application.ports.availability_result_repository import AvailabilityResultRepositoryPort
 from app.application.ports.call_repository import CallRepositoryPort
+from app.application.ports.facility_repository import FacilityRepositoryPort
+from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
 from app.application.ports.sweep_repository import SweepRepositoryPort
 from app.application.ports.webhook_event_repository import WebhookEventRepositoryPort
+from app.application.realtime_events import (
+    publish_availability_result_created,
+    publish_call_status_changed,
+    publish_sweep_status_event,
+)
 from app.core.exceptions import UnknownCallError
 from app.domain.entities.availability_result import AvailabilityResult
 from app.domain.entities.call import Call
@@ -98,11 +105,15 @@ class HandleCalleWebhookUseCase:
         availability_result_repository: AvailabilityResultRepositoryPort,
         webhook_event_repository: WebhookEventRepositoryPort,
         sweep_repository: SweepRepositoryPort,
+        facility_repository: FacilityRepositoryPort,
+        realtime_event_bus: RealtimeEventBusPort,
     ) -> None:
         self._calls = call_repository
         self._results = availability_result_repository
         self._events = webhook_event_repository
         self._sweeps = sweep_repository
+        self._facilities = facility_repository
+        self._realtime_event_bus = realtime_event_bus
 
     async def handle(self, *, event_id: str, event_type: str, call_data: dict[str, Any]) -> None:
         is_new = await self._events.mark_processed(event_id)
@@ -138,10 +149,15 @@ class HandleCalleWebhookUseCase:
             await self._maybe_complete_sweep(sweep_id)
 
     async def _maybe_complete_sweep(self, sweep_id: UUID) -> None:
-        """Flip Sweep.status to completed once every Call in it is terminal."""
+        """Flip Sweep.status to completed once every Call in it is terminal,
+        then publish the sweep's current progress either way — this call's
+        webhook always moves the sweep's state forward."""
         calls = await self._calls.list_by_sweep_id(sweep_id)
         if calls and all(call.status not in _PENDING_CALL_STATUSES for call in calls):
             await self._sweeps.update_status(sweep_id, SweepStatus.COMPLETED)
+        await publish_sweep_status_event(
+            self._realtime_event_bus, self._sweeps, self._calls, sweep_id
+        )
 
     async def _resolve_commodity_id(self, sweep_id: UUID, cache: dict[UUID, UUID]) -> UUID:
         if sweep_id not in cache:
@@ -163,18 +179,29 @@ class HandleCalleWebhookUseCase:
         call.ended_at = datetime.now(UTC)
         await self._calls.update(call)
 
+        facility = await self._facilities.get_by_id(call.facility_id)
+        if facility is not None:
+            await publish_call_status_changed(
+                self._realtime_event_bus, call, county=facility.county, commodity_id=commodity_id
+            )
+
         fields = _extract_result_fields(recipient, event_type, task_confidence)
         existing = await self._results.get_by_call_id(call.id)
         if existing is not None:
             for key, value in fields.items():
                 setattr(existing, key, value)
-            await self._results.update(existing)
-            return
+            result = await self._results.update(existing)
+        else:
+            result = await self._results.add(
+                AvailabilityResult(
+                    call_id=call.id,
+                    facility_id=call.facility_id,
+                    commodity_id=commodity_id,
+                    **fields,
+                )
+            )
 
-        result = AvailabilityResult(
-            call_id=call.id,
-            facility_id=call.facility_id,
-            commodity_id=commodity_id,
-            **fields,
-        )
-        await self._results.add(result)
+        if facility is not None:
+            await publish_availability_result_created(
+                self._realtime_event_bus, call.sweep_id, result, county=facility.county
+            )

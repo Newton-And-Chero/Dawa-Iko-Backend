@@ -19,7 +19,9 @@ from app.application.ports.call_provider_port import CallProviderPort
 from app.application.ports.call_repository import CallRepositoryPort
 from app.application.ports.commodity_repository import CommodityRepositoryPort
 from app.application.ports.geography_resolver_port import GeographyResolverPort
+from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
 from app.application.ports.sweep_repository import SweepRepositoryPort
+from app.application.realtime_events import publish_sweep_status_event
 from app.core.config import Settings
 from app.core.exceptions import NotFoundError
 from app.core.webhook_security import build_webhook_url
@@ -47,6 +49,7 @@ class SweepDependencies:
     commodity_repository: CommodityRepositoryPort
     call_provider: CallProviderPort
     settings: Settings
+    realtime_event_bus: RealtimeEventBusPort
 
 
 async def dispatch_call_chunk(
@@ -152,6 +155,9 @@ async def dispatch_sweep(
     if not chunks:
         # No candidates survived resolution/cooldown — nothing to wait on.
         await deps.sweep_repository.update_status(sweep.id, SweepStatus.COMPLETED)
+        await publish_sweep_status_event(
+            deps.realtime_event_bus, deps.sweep_repository, deps.call_repository, sweep.id
+        )
         return sweep.id
 
     for index, facility_chunk in enumerate(chunks):
@@ -166,4 +172,7 @@ async def dispatch_sweep(
         )
 
     await deps.sweep_repository.update_status(sweep.id, SweepStatus.IN_PROGRESS)
+    await publish_sweep_status_event(
+        deps.realtime_event_bus, deps.sweep_repository, deps.call_repository, sweep.id
+    )
     return sweep.id

@@ -23,6 +23,7 @@ from tests.application.fakes import (
     InMemoryCallRepository,
     InMemoryCommodityRepository,
     InMemoryFacilityRepository,
+    InMemoryRealtimeEventBus,
     InMemorySweepRepository,
 )
 
@@ -59,6 +60,7 @@ def _use_case(setup: dict) -> RequestManualCallUseCase:
         sweep_repository=setup["sweeps"],
         commodity_repository=setup["commodities"],
         call_provider=setup["call_provider"],
+        realtime_event_bus=InMemoryRealtimeEventBus(),
     )
 
 

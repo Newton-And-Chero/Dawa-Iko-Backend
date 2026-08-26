@@ -23,6 +23,8 @@ from app.domain.enums import (
 from tests.application.fakes import (
     InMemoryAvailabilityResultRepository,
     InMemoryCallRepository,
+    InMemoryFacilityRepository,
+    InMemoryRealtimeEventBus,
     InMemorySweepRepository,
     InMemoryWebhookEventRepository,
 )
@@ -48,17 +50,29 @@ def setup() -> dict:
     results = InMemoryAvailabilityResultRepository()
     events = InMemoryWebhookEventRepository()
     sweeps = InMemorySweepRepository()
+    facilities = InMemoryFacilityRepository()
+    realtime_event_bus = InMemoryRealtimeEventBus()
     use_case = HandleCalleWebhookUseCase(
         call_repository=calls,
         availability_result_repository=results,
         webhook_event_repository=events,
         sweep_repository=sweeps,
+        facility_repository=facilities,
+        realtime_event_bus=realtime_event_bus,
     )
-    return {"calls": calls, "results": results, "events": events, "sweeps": sweeps, "uc": use_case}
+    return {
+        "calls": calls,
+        "results": results,
+        "events": events,
+        "sweeps": sweeps,
+        "facilities": facilities,
+        "bus": realtime_event_bus,
+        "uc": use_case,
+    }
 
 
 async def _seed(setup: dict) -> Call:
-    facility = _facility()
+    facility = await setup["facilities"].add(_facility())
     commodity = Commodity(name="Carbetocin", category=CommodityCategory.ESSENTIAL_MEDICINE)
     sweep = Sweep(
         commodity_id=commodity.id,

@@ -13,3 +13,4 @@ class User:
     id: UUID = field(default_factory=uuid4)
     org: str | None = None
     phone_number: str | None = None
+    password_hash: str | None = None

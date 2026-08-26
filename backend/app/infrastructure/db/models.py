@@ -219,4 +219,5 @@ class UserModel(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(_pg_enum(UserRole, "user_role"), nullable=False)
     org: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    phone_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    phone_number: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)

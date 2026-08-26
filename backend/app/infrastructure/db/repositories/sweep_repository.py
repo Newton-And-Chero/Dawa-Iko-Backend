@@ -2,9 +2,10 @@
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import Text, cast, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.use_cases.list_sweeps import SweepFilter
 from app.core.exceptions import NotFoundError
 from app.domain.entities.sweep import Sweep
 from app.domain.enums import SweepStatus
@@ -54,6 +55,23 @@ class SqlAlchemySweepRepository:
 
     async def list_all(self) -> list[Sweep]:
         result = await self._session.execute(select(SweepModel))
+        return [_to_domain(m) for m in result.scalars().all()]
+
+    async def list_by_filter(self, sweep_filter: SweepFilter) -> list[Sweep]:
+        stmt = select(SweepModel)
+        if sweep_filter.commodity_id is not None:
+            stmt = stmt.where(SweepModel.commodity_id == sweep_filter.commodity_id)
+        if sweep_filter.status is not None:
+            stmt = stmt.where(SweepModel.status == sweep_filter.status)
+        if sweep_filter.date_from is not None:
+            stmt = stmt.where(SweepModel.created_at >= sweep_filter.date_from)
+        if sweep_filter.date_to is not None:
+            stmt = stmt.where(SweepModel.created_at <= sweep_filter.date_to)
+        if sweep_filter.geography is not None:
+            stmt = stmt.where(
+                cast(SweepModel.geography_scope, Text).ilike(f"%{sweep_filter.geography}%")
+            )
+        result = await self._session.execute(stmt.order_by(SweepModel.created_at.desc()))
         return [_to_domain(m) for m in result.scalars().all()]
 
     async def update_status(self, sweep_id: UUID, status: SweepStatus) -> None:

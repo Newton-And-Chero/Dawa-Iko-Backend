@@ -10,6 +10,7 @@ from app.application.ports.call_provider_port import CallProviderPort
 from app.application.ports.call_repository import CallRepositoryPort
 from app.application.ports.commodity_repository import CommodityRepositoryPort
 from app.application.ports.geography_resolver_port import GeographyResolverPort
+from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
 from app.application.ports.sweep_repository import SweepRepositoryPort
 from app.application.use_cases._sweep_dispatch import SweepDependencies, dispatch_sweep
 from app.core.config import Settings
@@ -26,6 +27,7 @@ class RunScheduledSweepUseCase:
         commodity_repository: CommodityRepositoryPort,
         call_provider: CallProviderPort,
         settings: Settings,
+        realtime_event_bus: RealtimeEventBusPort,
     ) -> None:
         self._deps = SweepDependencies(
             geography_resolver=geography_resolver,
@@ -34,6 +36,7 @@ class RunScheduledSweepUseCase:
             commodity_repository=commodity_repository,
             call_provider=call_provider,
             settings=settings,
+            realtime_event_bus=realtime_event_bus,
         )
 
     async def execute(

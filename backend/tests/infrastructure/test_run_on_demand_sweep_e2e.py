@@ -13,12 +13,14 @@ from app.domain.entities.commodity import Commodity
 from app.domain.entities.facility import Facility
 from app.domain.enums import CommodityCategory, FacilitySource, FacilityType, SweepStatus
 from app.domain.value_objects.geography_scope import CountyScope
+from app.infrastructure.cache.redis import get_redis
 from app.infrastructure.call_e.mock_calle_adapter import MockCallEAdapter
 from app.infrastructure.db.repositories.call_repository import SqlAlchemyCallRepository
 from app.infrastructure.db.repositories.commodity_repository import SqlAlchemyCommodityRepository
 from app.infrastructure.db.repositories.facility_repository import SqlAlchemyFacilityRepository
 from app.infrastructure.db.repositories.sweep_repository import SqlAlchemySweepRepository
 from app.infrastructure.geo.postgis_geography_resolver import PostGISGeographyResolver
+from app.infrastructure.realtime.event_bus import RealtimeEventBus
 from app.main import app
 
 
@@ -55,6 +57,7 @@ async def test_sweep_completes_once_all_mock_webhooks_land(db_session: AsyncSess
             commodity_repository=SqlAlchemyCommodityRepository(db_session),
             call_provider=adapter,
             settings=Settings(MAX_RECIPIENTS_PER_TASK=50),
+            realtime_event_bus=RealtimeEventBus(get_redis()),
         )
 
         sweep_id = await use_case.execute(

@@ -100,13 +100,16 @@ async def test_mock_calle_adapter_round_trip(db_session: AsyncSession) -> None:
         # Simulates what Sprint 04's dispatch will do: link the ids CALL-E
         # just returned back onto our Call rows (matched by phone number,
         # since CALL-E assigns its own opaque recipient ids) before the
-        # deferred webhook lands.
+        # deferred webhook lands. One bulk_update (one commit), not a
+        # per-row update loop: the mock webhook can fire the instant
+        # place_call() returns, and a partial write here would leave some
+        # rows linked and others silently unreachable when it does.
         recipient_by_phone = {r.phones[0]: r for r in call_task.recipients}
         for call, facility in zip(calls, facilities, strict=True):
             recipient_ref = recipient_by_phone[facility.phone_number]
             call.provider_call_id = call_task.id
             call.provider_recipient_id = recipient_ref.id
-            await call_repo.update(call)
+        await call_repo.bulk_update(calls)
 
         await adapter.wait_for_webhook(call_task.id)
 

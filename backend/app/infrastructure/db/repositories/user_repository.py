@@ -16,6 +16,7 @@ def _to_domain(model: UserModel) -> User:
         role=model.role,
         org=model.org,
         phone_number=model.phone_number,
+        password_hash=model.password_hash,
     )
 
 
@@ -26,6 +27,7 @@ def _to_model(user: User) -> UserModel:
         role=user.role,
         org=user.org,
         phone_number=user.phone_number,
+        password_hash=user.password_hash,
     )
 
 
@@ -39,9 +41,29 @@ class SqlAlchemyUserRepository:
         model = await self._session.get(UserModel, user_id)
         return _to_domain(model) if model is not None else None
 
+    async def get_by_phone_number(self, phone_number: str) -> User | None:
+        result = await self._session.execute(
+            select(UserModel).where(UserModel.phone_number == phone_number)
+        )
+        model = result.scalar_one_or_none()
+        return _to_domain(model) if model is not None else None
+
     async def add(self, user: User) -> User:
         model = _to_model(user)
         self._session.add(model)
+        await self._session.commit()
+        await self._session.refresh(model)
+        return _to_domain(model)
+
+    async def update(self, user: User) -> User:
+        model = await self._session.get(UserModel, user.id)
+        if model is None:
+            raise ValueError(f"user {user.id} not found")
+        model.name = user.name
+        model.role = user.role
+        model.org = user.org
+        model.phone_number = user.phone_number
+        model.password_hash = user.password_hash
         await self._session.commit()
         await self._session.refresh(model)
         return _to_domain(model)
