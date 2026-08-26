@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import NotFoundError
 from app.domain.entities.subscriber import Subscriber
 from app.infrastructure.db.models import SubscriberModel
 
@@ -17,6 +18,7 @@ def _to_domain(model: SubscriberModel) -> Subscriber:
         org=model.org,
         phone=model.phone,
         email=model.email,
+        webhook_url=model.webhook_url,
         watchlist_commodities=list(model.watchlist_commodities),
         watchlist_geography=dict(model.watchlist_geography),
     )
@@ -30,6 +32,7 @@ def _to_model(subscriber: Subscriber) -> SubscriberModel:
         org=subscriber.org,
         phone=subscriber.phone,
         email=subscriber.email,
+        webhook_url=subscriber.webhook_url,
         watchlist_commodities=list(subscriber.watchlist_commodities),
         watchlist_geography=dict(subscriber.watchlist_geography),
     )
@@ -48,6 +51,19 @@ class SqlAlchemySubscriberRepository:
     async def add(self, subscriber: Subscriber) -> Subscriber:
         model = _to_model(subscriber)
         self._session.add(model)
+        await self._session.commit()
+        await self._session.refresh(model)
+        return _to_domain(model)
+
+    async def update(self, subscriber: Subscriber) -> Subscriber:
+        model = await self._session.get(SubscriberModel, subscriber.id)
+        if model is None:
+            raise NotFoundError(f"subscriber {subscriber.id} not found")
+        updated = _to_model(subscriber)
+        for column in SubscriberModel.__table__.columns:
+            if column.name == "id":
+                continue
+            setattr(model, column.name, getattr(updated, column.name))
         await self._session.commit()
         await self._session.refresh(model)
         return _to_domain(model)

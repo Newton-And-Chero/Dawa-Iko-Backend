@@ -8,6 +8,7 @@ request body to the domain `GeographyScope` is just `model_dump()` +
 """
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -79,6 +80,19 @@ class SweepSummaryOut(BaseModel):
     created_at: datetime
 
 
+class PatientMatchOut(BaseModel):
+    """One in-stock facility match, ranked by distance then confidence
+    (PROJECT.md 2.5/2.7) — built by `build_patient_match_response`."""
+
+    facility_id: UUID
+    facility_name: str
+    distance_meters: float | None
+    price_kes: Decimal | None
+    can_hold: bool | None
+    hold_reference_code: str | None
+    confidence: float | None
+
+
 class SweepOut(BaseModel):
     sweep_id: UUID
     status: SweepStatus
@@ -89,3 +103,4 @@ class SweepOut(BaseModel):
     created_at: datetime
     requester_id: UUID | None
     counts_by_status: dict[CallStatus, int]
+    matches: list[PatientMatchOut]

@@ -1,6 +1,6 @@
-"""StockoutAlert response schema — field names mirror the `StockoutAlert`
-domain entity exactly (Sprint 01). Defined now per this sprint's checklist;
-wired to a real router with real data in Sprint 07."""
+"""StockoutAlert request/response schemas — field names mirror the
+`StockoutAlert` domain entity exactly (Sprint 01), wired to a real router
+with real data in Sprint 07."""
 
 from datetime import datetime
 from typing import Any
@@ -20,3 +20,8 @@ class StockoutAlertOut(BaseModel):
     facilities_with_stock_count: int
     triggered_at: datetime
     status: EscalationStatus
+    acknowledgment_note: str | None
+
+
+class EscalationNoteIn(BaseModel):
+    note: str | None = None

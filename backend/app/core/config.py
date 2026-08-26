@@ -55,6 +55,21 @@ class Settings(BaseSettings):
     AFRICAS_TALKING_API_KEY: str = ""
     AFRICAS_TALKING_SENDER_ID: str = ""
 
+    # --- Email (subscriber notification_channel=email) ---
+    EMAIL_MODE: Literal["mock", "live"] = "mock"
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_ADDRESS: str = ""
+
+    # --- Escalation & alerting ---
+    # A sweep at or below this in-stock fraction is scarce enough to warrant
+    # running severity classification at all (domain/services/severity.py is
+    # still the authority on whether an alert is actually created — this is a
+    # cheap pre-filter kept in sync with its own scarcity threshold).
+    STOCKOUT_THRESHOLD_PCT: float = 0.5
+
     # --- Auth ---
     JWT_SECRET: str = "change-me"
     JWT_ALGORITHM: str = "HS256"

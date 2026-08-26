@@ -15,11 +15,16 @@ from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.api.v1.schemas.sweep import SweepOut
+from app.api.v1.schemas.sweep import PatientMatchOut, SweepOut
 from app.api.v1.websocket.connection_manager import get_connection_manager
+from app.application.use_cases.build_patient_match_response import BuildPatientMatchResponseUseCase
 from app.application.use_cases.get_sweep_status import GetSweepStatusUseCase
 from app.core.exceptions import NotFoundError
+from app.infrastructure.db.repositories.availability_result_repository import (
+    SqlAlchemyAvailabilityResultRepository,
+)
 from app.infrastructure.db.repositories.call_repository import SqlAlchemyCallRepository
+from app.infrastructure.db.repositories.facility_repository import SqlAlchemyFacilityRepository
 from app.infrastructure.db.repositories.sweep_repository import SqlAlchemySweepRepository
 from app.infrastructure.db.session import async_session_factory
 from app.infrastructure.realtime.channels import sweep_channel
@@ -30,15 +35,25 @@ router = APIRouter(tags=["realtime"])
 @router.websocket("/ws/sweeps/{sweep_id}")
 async def sweep_ws(websocket: WebSocket, sweep_id: UUID) -> None:
     async with async_session_factory() as session:
+        call_repository = SqlAlchemyCallRepository(session)
+        sweep_repository = SqlAlchemySweepRepository(session)
         use_case = GetSweepStatusUseCase(
-            SqlAlchemySweepRepository(session), SqlAlchemyCallRepository(session)
+            sweep_repository=sweep_repository, call_repository=call_repository
         )
         try:
             progress = await use_case.execute(sweep_id)
         except NotFoundError:
             await websocket.close(code=4404)
             return
-        snapshot = SweepOut(**dataclasses.asdict(progress))
+
+        matches = await BuildPatientMatchResponseUseCase(
+            sweep_repository=sweep_repository,
+            call_repository=call_repository,
+            availability_result_repository=SqlAlchemyAvailabilityResultRepository(session),
+            facility_repository=SqlAlchemyFacilityRepository(session),
+        ).execute(sweep_id)
+        matches_out = [PatientMatchOut(**dataclasses.asdict(m)) for m in matches]
+        snapshot = SweepOut(**dataclasses.asdict(progress), matches=matches_out)
 
     channel = sweep_channel(sweep_id)
     manager = get_connection_manager()

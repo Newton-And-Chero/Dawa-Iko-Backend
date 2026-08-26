@@ -13,8 +13,11 @@ from uuid import UUID
 
 from app.application.ports.availability_result_repository import AvailabilityResultRepositoryPort
 from app.application.ports.call_repository import CallRepositoryPort
+from app.application.ports.commodity_repository import CommodityRepositoryPort
 from app.application.ports.facility_repository import FacilityRepositoryPort
 from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
+from app.application.ports.stockout_alert_repository import StockoutAlertRepositoryPort
+from app.application.ports.subscriber_repository import SubscriberRepositoryPort
 from app.application.ports.sweep_repository import SweepRepositoryPort
 from app.application.ports.webhook_event_repository import WebhookEventRepositoryPort
 from app.application.realtime_events import (
@@ -22,6 +25,12 @@ from app.application.realtime_events import (
     publish_call_status_changed,
     publish_sweep_status_event,
 )
+from app.application.use_cases.detect_stockout import DetectStockoutUseCase
+from app.application.use_cases.dispatch_escalation import (
+    DispatchEscalationUseCase,
+    NotifierResolver,
+)
+from app.core.config import Settings
 from app.core.exceptions import UnknownCallError
 from app.domain.entities.availability_result import AvailabilityResult
 from app.domain.entities.call import Call
@@ -106,14 +115,24 @@ class HandleCalleWebhookUseCase:
         webhook_event_repository: WebhookEventRepositoryPort,
         sweep_repository: SweepRepositoryPort,
         facility_repository: FacilityRepositoryPort,
+        commodity_repository: CommodityRepositoryPort,
+        stockout_alert_repository: StockoutAlertRepositoryPort,
+        subscriber_repository: SubscriberRepositoryPort,
+        notifier_resolver: NotifierResolver,
         realtime_event_bus: RealtimeEventBusPort,
+        settings: Settings,
     ) -> None:
         self._calls = call_repository
         self._results = availability_result_repository
         self._events = webhook_event_repository
         self._sweeps = sweep_repository
         self._facilities = facility_repository
+        self._commodities = commodity_repository
+        self._alerts = stockout_alert_repository
+        self._subscribers = subscriber_repository
+        self._notifier_resolver = notifier_resolver
         self._realtime_event_bus = realtime_event_bus
+        self._settings = settings
 
     async def handle(self, *, event_id: str, event_type: str, call_data: dict[str, Any]) -> None:
         is_new = await self._events.mark_processed(event_id)
@@ -155,9 +174,26 @@ class HandleCalleWebhookUseCase:
         calls = await self._calls.list_by_sweep_id(sweep_id)
         if calls and all(call.status not in _PENDING_CALL_STATUSES for call in calls):
             await self._sweeps.update_status(sweep_id, SweepStatus.COMPLETED)
+            await self._detect_and_dispatch_stockout(sweep_id)
         await publish_sweep_status_event(
             self._realtime_event_bus, self._sweeps, self._calls, sweep_id
         )
+
+    async def _detect_and_dispatch_stockout(self, sweep_id: UUID) -> None:
+        alert = await DetectStockoutUseCase(
+            sweep_repository=self._sweeps,
+            call_repository=self._calls,
+            availability_result_repository=self._results,
+            commodity_repository=self._commodities,
+            stockout_alert_repository=self._alerts,
+            realtime_event_bus=self._realtime_event_bus,
+            settings=self._settings,
+        ).execute(sweep_id)
+        if alert is not None:
+            await DispatchEscalationUseCase(
+                subscriber_repository=self._subscribers,
+                notifier_resolver=self._notifier_resolver,
+            ).execute(alert)
 
     async def _resolve_commodity_id(self, sweep_id: UUID, cache: dict[UUID, UUID]) -> UUID:
         if sweep_id not in cache:

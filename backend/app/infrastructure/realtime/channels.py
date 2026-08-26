@@ -5,7 +5,7 @@ only lives in one place.
 
 from uuid import UUID
 
-# Reserved for Sprint 07's escalation/alert events — not published to yet.
+# Sprint 07's escalation/alert events (`alert.created`, `alert.updated`).
 ALERTS_CHANNEL = "alerts"
 
 

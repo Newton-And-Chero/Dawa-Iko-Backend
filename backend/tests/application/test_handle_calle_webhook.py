@@ -6,6 +6,7 @@ from decimal import Decimal
 import pytest
 
 from app.application.use_cases.handle_calle_webhook import HandleCalleWebhookUseCase
+from app.core.config import Settings
 from app.core.exceptions import UnknownCallError
 from app.domain.entities.call import Call
 from app.domain.entities.commodity import Commodity
@@ -21,10 +22,14 @@ from app.domain.enums import (
     SweepTrigger,
 )
 from tests.application.fakes import (
+    FakeNotifier,
     InMemoryAvailabilityResultRepository,
     InMemoryCallRepository,
+    InMemoryCommodityRepository,
     InMemoryFacilityRepository,
     InMemoryRealtimeEventBus,
+    InMemoryStockoutAlertRepository,
+    InMemorySubscriberRepository,
     InMemorySweepRepository,
     InMemoryWebhookEventRepository,
 )
@@ -51,6 +56,10 @@ def setup() -> dict:
     events = InMemoryWebhookEventRepository()
     sweeps = InMemorySweepRepository()
     facilities = InMemoryFacilityRepository()
+    commodities = InMemoryCommodityRepository()
+    alerts = InMemoryStockoutAlertRepository()
+    subscribers = InMemorySubscriberRepository()
+    notifier = FakeNotifier()
     realtime_event_bus = InMemoryRealtimeEventBus()
     use_case = HandleCalleWebhookUseCase(
         call_repository=calls,
@@ -58,7 +67,12 @@ def setup() -> dict:
         webhook_event_repository=events,
         sweep_repository=sweeps,
         facility_repository=facilities,
+        commodity_repository=commodities,
+        stockout_alert_repository=alerts,
+        subscriber_repository=subscribers,
+        notifier_resolver=lambda channel: notifier,
         realtime_event_bus=realtime_event_bus,
+        settings=Settings(),
     )
     return {
         "calls": calls,
@@ -66,6 +80,10 @@ def setup() -> dict:
         "events": events,
         "sweeps": sweeps,
         "facilities": facilities,
+        "commodities": commodities,
+        "alerts": alerts,
+        "subscribers": subscribers,
+        "notifier": notifier,
         "bus": realtime_event_bus,
         "uc": use_case,
     }
@@ -73,7 +91,9 @@ def setup() -> dict:
 
 async def _seed(setup: dict) -> Call:
     facility = await setup["facilities"].add(_facility())
-    commodity = Commodity(name="Carbetocin", category=CommodityCategory.ESSENTIAL_MEDICINE)
+    commodity = await setup["commodities"].add(
+        Commodity(name="Carbetocin", category=CommodityCategory.ESSENTIAL_MEDICINE)
+    )
     sweep = Sweep(
         commodity_id=commodity.id,
         geography_scope={"county": "Kirinyaga"},

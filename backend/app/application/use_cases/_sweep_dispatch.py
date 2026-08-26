@@ -154,6 +154,11 @@ async def dispatch_sweep(
 
     if not chunks:
         # No candidates survived resolution/cooldown — nothing to wait on.
+        # Deliberately does not run stockout detection (workflows/07): a sweep
+        # that completes here always has facilities_checked_count == 0, and
+        # classify_severity treats that as "nothing to detect" by contract —
+        # there is no false-positive stockout to guard against, so there is
+        # nothing this path could ever find.
         await deps.sweep_repository.update_status(sweep.id, SweepStatus.COMPLETED)
         await publish_sweep_status_event(
             deps.realtime_event_bus, deps.sweep_repository, deps.call_repository, sweep.id

@@ -40,7 +40,8 @@ Every message on every route — both pushed live events and connect-time
 snapshots — uses the same envelope, and `v` is incremented only on a
 breaking change to that envelope or to an existing event type's `data`
 shape. Adding a new event type, or a new field to an existing `data` shape,
-does not bump `v` (Sprint 07's `alert.*` events are added this way).
+does not bump `v` — Sprint 07's `alert.*` events, and `SweepOut`'s new
+`matches` field, were both added this way.
 
 ## Envelope
 
@@ -66,9 +67,10 @@ does not bump `v` (Sprint 07's `alert.*` events are added this way).
 
 Published by `app/application/realtime_events.py`, called from the
 use cases that already own the write: `HandleCalleWebhookUseCase` (on each
-`Call`/`AvailabilityResult` write) and every sweep-status-flip site
-(`_sweep_dispatch.dispatch_sweep`, `RetryFailedCallsUseCase`,
-`RequestManualCallUseCase`).
+`Call`/`AvailabilityResult` write, and on each `StockoutAlert` it detects or
+`AcknowledgeEscalationUseCase`/`ResolveEscalationUseCase` update) and every
+sweep-status-flip site (`_sweep_dispatch.dispatch_sweep`,
+`RetryFailedCallsUseCase`, `RequestManualCallUseCase`).
 
 ### `call.status_changed`
 
@@ -141,6 +143,36 @@ Same shape as `sweep.progress`, published to `sweep:{sweep_id}` when
 This is the terminal event for a sweep — no further events publish to its
 channel afterward.
 
+### `alert.created`
+
+Published to the `alerts` channel (see below) whenever `DetectStockoutUseCase`
+creates a new `StockoutAlert`. `sweep_id` is `null` — an alert outlives the
+one sweep that triggered it and is identified by its own `id`.
+
+```json
+{
+  "id": "...",
+  "commodity_id": "...",
+  "geography": { "kind": "county", "county": "Kirinyaga" },
+  "severity": "high",
+  "facilities_checked_count": 10,
+  "facilities_with_stock_count": 0,
+  "status": "open",
+  "triggered_at": "2026-08-23T12:00:00+00:00"
+}
+```
+
+`geography` is a `GeographyScope` dict (Sprint 01), copied verbatim from the
+sweep that triggered the alert. `severity` is one of `EscalationSeverity`'s
+values (`low`, `medium`, `high`, `critical`); `status` one of
+`EscalationStatus`'s (`open`, `acknowledged`, `resolved`).
+
+### `alert.updated`
+
+Same shape as `alert.created`, published to the `alerts` channel whenever
+`AcknowledgeEscalationUseCase`/`ResolveEscalationUseCase` transitions a
+`StockoutAlert`'s status.
+
 ## Connect-time snapshots
 
 Sent once, immediately after a WS connection is accepted (or as the first
@@ -164,9 +196,26 @@ Sent on `WS /ws/sweeps/{sweep_id}` connect and as the first SSE frame on
   "trigger_type": "on_demand",
   "created_at": "2026-08-23T11:55:00+00:00",
   "requester_id": null,
-  "counts_by_status": { "queued": 8, "completed": 4 }
+  "counts_by_status": { "queued": 8, "completed": 4 },
+  "matches": [
+    {
+      "facility_id": "...",
+      "facility_name": "Wamumu Dispensary",
+      "distance_meters": 1240.5,
+      "price_kes": "90.00",
+      "can_hold": true,
+      "hold_reference_code": null,
+      "confidence": 0.87
+    }
+  ]
 }
 ```
+
+`matches` (Sprint 07) is the sweep's in-stock `AvailabilityResult`s ranked by
+distance then confidence (`build_patient_match_response`, PROJECT.md 2.5/2.7)
+— empty until at least one facility reports stock. `distance_meters` is
+`null` for a county/sub_county/ward-scoped sweep, which has no single
+reference point to measure from.
 
 ### `geography.snapshot`
 
@@ -191,10 +240,14 @@ pair, not one sweep. `data`:
 - `geo:{county}:{commodity_id}` — `call.status_changed` and
   `availability_result.created` events fanned out from whichever sweep(s)
   touched that county+commodity pair.
-- `alerts` — reserved for Sprint 07's `alert.created`/`alert.updated`
-  events; nothing publishes to it yet.
+- `alerts` — `alert.created`/`alert.updated` events (Sprint 07). Not scoped
+  to a county/commodity/sweep — every subscriber-facing consumer of alerts
+  reads this one channel and filters client-side.
 
 ## Explicitly deferred
 
-- `alert.*` event types — Sprint 07.
+- A dedicated `WS`/`SSE` route for streaming `alerts` live (Sprint 07 only
+  adds the channel and event types; no route subscribes to it yet — see
+  workflows/07's checklist, which scopes this sprint to detection/dispatch,
+  not a new transport).
 - Any client/frontend implementation.

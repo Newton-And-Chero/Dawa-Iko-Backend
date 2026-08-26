@@ -182,6 +182,7 @@ class StockoutAlertModel(Base):
     status: Mapped[EscalationStatus] = mapped_column(
         _pg_enum(EscalationStatus, "escalation_status"), nullable=False
     )
+    acknowledgment_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class SubscriberModel(Base):
@@ -192,6 +193,7 @@ class SubscriberModel(Base):
     org: Mapped[str | None] = mapped_column(String(255), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    webhook_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     watchlist_commodities: Mapped[list[UUID]] = mapped_column(
         ARRAY(Uuid()), nullable=False, default=list
     )

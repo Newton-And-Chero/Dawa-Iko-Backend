@@ -7,19 +7,23 @@ from typing import Any
 from uuid import UUID
 
 from app.application.use_cases.list_commodities import CommodityFilter
+from app.application.use_cases.list_escalations import EscalationFilter
 from app.application.use_cases.list_facilities import FacilityFilter
 from app.core.exceptions import NotFoundError
 from app.domain.entities.availability_result import AvailabilityResult
 from app.domain.entities.call import Call
 from app.domain.entities.commodity import Commodity
 from app.domain.entities.facility import Facility
+from app.domain.entities.stockout_alert import StockoutAlert
+from app.domain.entities.subscriber import Subscriber
 from app.domain.entities.sweep import Sweep
-from app.domain.enums import SweepStatus
+from app.domain.enums import NotificationChannel, SweepStatus
 from app.domain.value_objects.call_task_ref import (
     CallRecipient,
     CallRecipientResultRef,
     CallTaskRef,
 )
+from app.domain.value_objects.notification_result import NotificationResult
 
 
 class InMemoryFacilityRepository:
@@ -289,3 +293,79 @@ class FakeCallProvider:
 
     async def list_call_events(self, call_id: str) -> list[Any]:
         raise NotImplementedError
+
+
+class InMemoryStockoutAlertRepository:
+    def __init__(self) -> None:
+        self._alerts: dict[UUID, StockoutAlert] = {}
+
+    async def get_by_id(self, stockout_alert_id: UUID) -> StockoutAlert | None:
+        return self._alerts.get(stockout_alert_id)
+
+    async def add(self, stockout_alert: StockoutAlert) -> StockoutAlert:
+        self._alerts[stockout_alert.id] = stockout_alert
+        return stockout_alert
+
+    async def update(self, stockout_alert: StockoutAlert) -> StockoutAlert:
+        if stockout_alert.id not in self._alerts:
+            raise NotFoundError(f"stockout alert {stockout_alert.id} not found")
+        self._alerts[stockout_alert.id] = stockout_alert
+        return stockout_alert
+
+    async def list_all(self) -> list[StockoutAlert]:
+        return list(self._alerts.values())
+
+    async def list_by_filter(self, escalation_filter: EscalationFilter) -> list[StockoutAlert]:
+        results = list(self._alerts.values())
+        if escalation_filter.commodity_id is not None:
+            results = [a for a in results if a.commodity_id == escalation_filter.commodity_id]
+        if escalation_filter.status is not None:
+            results = [a for a in results if a.status == escalation_filter.status]
+        if escalation_filter.severity is not None:
+            results = [a for a in results if a.severity == escalation_filter.severity]
+        return results
+
+
+class InMemorySubscriberRepository:
+    def __init__(self) -> None:
+        self._subscribers: dict[UUID, Subscriber] = {}
+
+    async def get_by_id(self, subscriber_id: UUID) -> Subscriber | None:
+        return self._subscribers.get(subscriber_id)
+
+    async def add(self, subscriber: Subscriber) -> Subscriber:
+        self._subscribers[subscriber.id] = subscriber
+        return subscriber
+
+    async def update(self, subscriber: Subscriber) -> Subscriber:
+        if subscriber.id not in self._subscribers:
+            raise NotFoundError(f"subscriber {subscriber.id} not found")
+        self._subscribers[subscriber.id] = subscriber
+        return subscriber
+
+    async def list_all(self) -> list[Subscriber]:
+        return list(self._subscribers.values())
+
+
+class FakeNotifier:
+    """Records `send()` invocations instead of delivering anything — used by
+    application-layer `dispatch_escalation` tests."""
+
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
+        self.sent: list[dict[str, Any]] = []
+
+    async def send(
+        self,
+        *,
+        channel: NotificationChannel,
+        recipient: str,
+        message: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> NotificationResult:
+        if self.fail:
+            raise RuntimeError("simulated notifier failure")
+        self.sent.append(
+            {"channel": channel, "recipient": recipient, "message": message, "metadata": metadata}
+        )
+        return NotificationResult(channel=channel, recipient=recipient, success=True)

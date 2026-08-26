@@ -8,6 +8,7 @@ on its own say-so.
 """
 
 import json
+from functools import partial
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -16,18 +17,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.dependencies import get_realtime_event_bus
 from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
 from app.application.use_cases.handle_calle_webhook import HandleCalleWebhookUseCase
+from app.core.config import Settings, get_settings
 from app.core.exceptions import UnknownCallError
 from app.core.webhook_security import is_valid_webhook_token
 from app.infrastructure.db.repositories.availability_result_repository import (
     SqlAlchemyAvailabilityResultRepository,
 )
 from app.infrastructure.db.repositories.call_repository import SqlAlchemyCallRepository
+from app.infrastructure.db.repositories.commodity_repository import SqlAlchemyCommodityRepository
 from app.infrastructure.db.repositories.facility_repository import SqlAlchemyFacilityRepository
+from app.infrastructure.db.repositories.stockout_alert_repository import (
+    SqlAlchemyStockoutAlertRepository,
+)
+from app.infrastructure.db.repositories.subscriber_repository import SqlAlchemySubscriberRepository
 from app.infrastructure.db.repositories.sweep_repository import SqlAlchemySweepRepository
 from app.infrastructure.db.repositories.webhook_event_repository import (
     SqlAlchemyWebhookEventRepository,
 )
 from app.infrastructure.db.session import get_session
+from app.infrastructure.notifications.factory import build_notifier
 
 router = APIRouter(tags=["webhooks"])
 
@@ -38,6 +46,7 @@ async def receive_calle_webhook(
     request: Request,
     session: AsyncSession = Depends(get_session),  # noqa: B008 (standard FastAPI DI pattern)
     realtime_event_bus: RealtimeEventBusPort = Depends(get_realtime_event_bus),
+    settings: Settings = Depends(get_settings),
 ) -> dict[str, bool]:
     if not is_valid_webhook_token(webhook_token):
         # 404, not 403/401 — don't confirm the endpoint exists to a guesser.
@@ -58,7 +67,12 @@ async def receive_calle_webhook(
         webhook_event_repository=SqlAlchemyWebhookEventRepository(session),
         sweep_repository=SqlAlchemySweepRepository(session),
         facility_repository=SqlAlchemyFacilityRepository(session),
+        commodity_repository=SqlAlchemyCommodityRepository(session),
+        stockout_alert_repository=SqlAlchemyStockoutAlertRepository(session),
+        subscriber_repository=SqlAlchemySubscriberRepository(session),
+        notifier_resolver=partial(build_notifier, settings=settings),
         realtime_event_bus=realtime_event_bus,
+        settings=settings,
     )
     try:
         await use_case.handle(

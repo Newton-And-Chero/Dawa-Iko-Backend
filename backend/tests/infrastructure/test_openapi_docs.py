@@ -21,6 +21,11 @@ _EXPECTED_PATHS = {
     "/v1/calls/{call_id}",
     "/v1/calls/{call_id}/retry",
     "/v1/availability-results",
+    "/v1/escalations",
+    "/v1/escalations/{escalation_id}/acknowledge",
+    "/v1/escalations/{escalation_id}/resolve",
+    "/v1/subscribers",
+    "/v1/subscribers/{subscriber_id}",
 }
 
 
