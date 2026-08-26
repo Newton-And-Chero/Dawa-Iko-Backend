@@ -1,8 +1,14 @@
-"""POST /webhooks/calle/{webhook_token} — the happy path and its
-replay-is-a-no-op behavior, through the real ASGI app. Every *rejection*
-path (wrong token, mismatched event id, unknown call, forged replay) is
-covered together as its own adversarial suite in
-tests/integration/test_webhook_forgery.py (Sprint 09)."""
+"""Adversarial suite for `POST /webhooks/calle/{webhook_token}` (Sprint 09).
+
+CALL-E signs nothing (no HMAC, no `CALL-E-Signature` header — RULES.md), so
+this receiver is the only thing standing between an open internet endpoint
+and our Call/AvailabilityResult tables. Every case here must be rejected or
+safely no-op'd, never silently accepted as a real result. Run together as
+one suite per workflows/09, distinct from test_webhooks_route.py's own
+happy-path/persistence coverage (Sprint 03).
+"""
+
+from typing import Any
 
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +23,6 @@ from app.domain.enums import (
     CommodityCategory,
     FacilitySource,
     FacilityType,
-    StockStatus,
     SweepTrigger,
 )
 from app.infrastructure.db.repositories.availability_result_repository import (
@@ -29,15 +34,15 @@ from app.infrastructure.db.repositories.facility_repository import SqlAlchemyFac
 from app.infrastructure.db.repositories.sweep_repository import SqlAlchemySweepRepository
 
 
-def _webhook_path() -> str:
-    return f"/webhooks/calle/{get_webhook_token()}"
+def _webhook_path(token: str | None = None) -> str:
+    return f"/webhooks/calle/{token if token is not None else get_webhook_token()}"
 
 
-def _body(event_id: str, call_id: str, recipient_id: str) -> dict:
+def _body(event_id: str, call_id: str, recipient_id: str) -> dict[str, Any]:
     return {
         "id": event_id,
         "type": "call.completed",
-        "created_at": "2026-08-20T12:00:00+00:00",
+        "created_at": "2026-08-26T12:00:00+00:00",
         "data": {
             "id": call_id,
             "completion_confidence": {"score": 0.8, "label": "high"},
@@ -68,14 +73,14 @@ async def _seed_pending_call(db_session: AsyncSession, *, provider_call_id: str)
     )
     facility = await SqlAlchemyFacilityRepository(db_session).add(
         Facility(
-            name="Route Test Dispensary",
+            name="Forgery Test Dispensary",
             type=FacilityType.DISPENSARY,
             county="Kirinyaga",
             sub_county="Mwea",
             ward="Wamumu",
             gps_lat=-0.6849,
             gps_lng=37.3667,
-            phone_number="+254700000050",
+            phone_number="+254700000060",
             source=FacilitySource.KMHFL,
         )
     )
@@ -92,30 +97,65 @@ async def _seed_pending_call(db_session: AsyncSession, *, provider_call_id: str)
             facility_id=facility.id,
             status=CallStatus.QUEUED,
             provider_call_id=provider_call_id,
-            provider_recipient_id="recip_route",
+            provider_recipient_id="recip_forgery",
         )
     )
 
 
-async def test_happy_path_then_replay_is_a_noop(
+async def test_wrong_webhook_token_path_segment_is_rejected(client: AsyncClient) -> None:
+    response = await client.post(
+        _webhook_path("not-the-real-token"),
+        json=_body("evt_forge_token", "call_forge_token", "recip_x"),
+        headers={"CALL-E-Event-Id": "evt_forge_token"},
+    )
+    assert response.status_code == 404
+
+
+async def test_event_id_header_not_matching_body_id_is_rejected(client: AsyncClient) -> None:
+    response = await client.post(
+        _webhook_path(),
+        json=_body("evt_forge_body", "call_forge_body", "recip_x"),
+        headers={"CALL-E-Event-Id": "evt_forge_header_mismatch"},
+    )
+    assert response.status_code == 400
+
+
+async def test_missing_event_id_header_is_rejected(client: AsyncClient) -> None:
+    response = await client.post(
+        _webhook_path(), json=_body("evt_forge_missing", "call_forge_missing", "recip_x")
+    )
+    assert response.status_code == 400
+
+
+async def test_call_id_never_dispatched_by_us_is_rejected(client: AsyncClient) -> None:
+    response = await client.post(
+        _webhook_path(),
+        json=_body("evt_forge_spoofed", "call_never_dispatched_by_us", "recip_x"),
+        headers={"CALL-E-Event-Id": "evt_forge_spoofed"},
+    )
+    assert response.status_code == 409
+
+
+async def test_replayed_already_processed_event_id_is_a_safe_noop(
     client: AsyncClient, db_session: AsyncSession
 ) -> None:
-    call = await _seed_pending_call(db_session, provider_call_id="call_route_ok")
-    body = _body("evt_route_ok", "call_route_ok", "recip_route")
+    call = await _seed_pending_call(db_session, provider_call_id="call_forge_replay")
+    body = _body("evt_forge_replay", "call_forge_replay", "recip_forgery")
 
     first = await client.post(
-        _webhook_path(), json=body, headers={"CALL-E-Event-Id": "evt_route_ok"}
+        _webhook_path(), json=body, headers={"CALL-E-Event-Id": "evt_forge_replay"}
     )
     assert first.status_code == 200
-    assert first.json() == {"ok": True}
 
     results_repo = SqlAlchemyAvailabilityResultRepository(db_session)
-    result = await results_repo.get_by_call_id(call.id)
-    assert result is not None
-    assert result.in_stock == StockStatus.YES
+    first_result = await results_repo.get_by_call_id(call.id)
+    assert first_result is not None
 
+    # A byte-for-byte replay of an already-processed event must not be
+    # treated as a second, independent result — CALL-E redelivers on its
+    # own retry schedule, and a naive receiver would double-count it.
     replay = await client.post(
-        _webhook_path(), json=body, headers={"CALL-E-Event-Id": "evt_route_ok"}
+        _webhook_path(), json=body, headers={"CALL-E-Event-Id": "evt_forge_replay"}
     )
     assert replay.status_code == 200
 

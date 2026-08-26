@@ -41,6 +41,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      # No curl/wget in the slim base image — urllib needs nothing extra.
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/healthz', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   worker:
     build: .
@@ -54,10 +61,18 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers.celery_app inspect ping -d celery@$$HOSTNAME --timeout 5"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
 
   beat:
     build: .
-    command: uv run celery -A app.workers.celery_app beat --loglevel=info
+    # A pidfile gives the healthcheck something concrete to probe — Celery
+    # Beat has no built-in inspect/ping (that's a worker-side RPC).
+    command: uv run celery -A app.workers.celery_app beat --loglevel=info --pidfile=/tmp/celerybeat.pid
     env_file:
       - .env
     volumes:
@@ -67,6 +82,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -e /proc/$(cat /tmp/celerybeat.pid)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
 volumes:
   db_data:

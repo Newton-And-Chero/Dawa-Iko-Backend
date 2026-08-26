@@ -18,6 +18,7 @@ from app.domain.entities.stockout_alert import StockoutAlert
 from app.domain.entities.subscriber import Subscriber
 from app.domain.entities.sweep import Sweep
 from app.domain.enums import NotificationChannel, SweepStatus
+from app.domain.value_objects.analytics import FacilityCallStats, SweepStockSummary
 from app.domain.value_objects.call_task_ref import (
     CallRecipient,
     CallRecipientResultRef,
@@ -345,6 +346,62 @@ class InMemorySubscriberRepository:
 
     async def list_all(self) -> list[Subscriber]:
         return list(self._subscribers.values())
+
+
+class InMemoryAnalyticsRepository:
+    """Application-layer fake for `AnalyticsRepositoryPort`. Geography
+    matching here is an exact-string tag on each seeded summary rather than
+    the real repository's substring-over-JSONB match — good enough to test
+    use-case orchestration; the real matching behavior is covered by the
+    infrastructure-layer `SqlAlchemyAnalyticsRepository` tests."""
+
+    def __init__(self) -> None:
+        self._summaries: dict[UUID, list[tuple[str | None, SweepStockSummary]]] = {}
+        self._facility_stats: dict[UUID, FacilityCallStats] = {}
+        self._facility_confidences: dict[UUID, list[float]] = {}
+
+    def seed_summaries(
+        self, commodity_id: UUID, geography: str | None, summaries: list[SweepStockSummary]
+    ) -> None:
+        self._summaries.setdefault(commodity_id, []).extend(
+            (geography, summary) for summary in summaries
+        )
+
+    def seed_facility_stats(self, stats: FacilityCallStats) -> None:
+        self._facility_stats[stats.facility_id] = stats
+
+    def seed_confidences(self, facility_id: UUID, confidences: list[float]) -> None:
+        self._facility_confidences[facility_id] = confidences
+
+    async def list_sweep_stock_summaries(
+        self,
+        commodity_id: UUID,
+        *,
+        geography: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[SweepStockSummary]:
+        rows = self._summaries.get(commodity_id, [])
+        result = []
+        for row_geography, summary in rows:
+            if geography is not None and row_geography != geography:
+                continue
+            if date_from is not None and summary.created_at < date_from:
+                continue
+            if date_to is not None and summary.created_at > date_to:
+                continue
+            result.append(summary)
+        return result
+
+    async def facility_call_stats(self, facility_id: UUID) -> FacilityCallStats:
+        empty = FacilityCallStats(facility_id=facility_id, total_calls=0, completed_calls=0)
+        return self._facility_stats.get(facility_id, empty)
+
+    async def facility_result_confidences(self, facility_id: UUID) -> list[float]:
+        return self._facility_confidences.get(facility_id, [])
+
+    async def list_facility_ids_with_calls(self) -> list[UUID]:
+        return list(self._facility_stats.keys())
 
 
 class FakeNotifier:

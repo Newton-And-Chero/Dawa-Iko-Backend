@@ -26,5 +26,12 @@ BEAT_SCHEDULE = {
     "retry-failed-calls": {
         "task": "app.workers.sweep_tasks.retry_failed_calls_task",
         "schedule": crontab(minute=0),  # hourly
-    }
+    },
+    # Off-peak daily batch (workflows/08): Facility.reliability_score is a
+    # cached/derived field, recomputed on a schedule rather than on every
+    # call's webhook.
+    "recompute-facility-reliability": {
+        "task": "app.workers.analytics_tasks.recompute_facility_reliability_task",
+        "schedule": crontab(hour=2, minute=0),
+    },
 }

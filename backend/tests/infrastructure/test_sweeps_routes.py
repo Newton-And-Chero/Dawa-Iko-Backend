@@ -1,24 +1,23 @@
 """Sweeps router: POST /v1/sweeps/query (public + rate-limited),
 GET /v1/sweeps/{id} (public), GET /v1/sweeps (analyst+),
 POST /v1/sweeps/scheduled (admin/analyst).
+
+Rate-limit abuse (burst past the limit, reset, Redis key TTL) is its own
+adversarial suite in tests/integration/test_rate_limit_abuse.py (Sprint 09).
 """
 
-import asyncio
 from collections.abc import Awaitable, Callable
 
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings, get_settings
 from app.domain.entities.commodity import Commodity
 from app.domain.entities.facility import Facility
 from app.domain.entities.user import User
 from app.domain.enums import CommodityCategory, FacilitySource, FacilityType, UserRole
-from app.infrastructure.cache.redis import get_redis
 from app.infrastructure.db.repositories.commodity_repository import SqlAlchemyCommodityRepository
 from app.infrastructure.db.repositories.facility_repository import SqlAlchemyFacilityRepository
 from app.infrastructure.db.repositories.sweep_repository import SqlAlchemySweepRepository
-from app.main import app
 
 
 def _auth(token: str) -> dict[str, str]:
@@ -141,46 +140,3 @@ async def test_scheduled_sweep_allowed_for_analyst(
         json={"commodity": "Carbetocin", "geography": {"kind": "county", "county": "Kirinyaga"}},
     )
     assert response.status_code == 202
-
-
-async def test_public_query_rate_limit_returns_429_then_resets(
-    client: AsyncClient, db_session: AsyncSession
-) -> None:
-    await _seed_commodity_and_facility(db_session)
-
-    def _strict_settings() -> Settings:
-        return Settings(
-            CALL_E_MODE="mock",
-            FACILITY_IMPORT_MODE="mock",
-            SMS_MODE="mock",
-            PUBLIC_QUERY_RATE_LIMIT=2,
-            PUBLIC_QUERY_RATE_WINDOW_SECONDS=1,
-        )
-
-    app.dependency_overrides[get_settings] = _strict_settings
-    redis = get_redis()
-    body = {
-        "commodity": "Carbetocin",
-        "geography": {"kind": "county", "county": "Kirinyaga"},
-    }
-    keys = [k async for k in redis.scan_iter("rate_limit:sweeps_query:*")]
-    if keys:
-        await redis.delete(*keys)
-    try:
-        first = await client.post("/v1/sweeps/query", json=body)
-        second = await client.post("/v1/sweeps/query", json=body)
-        third = await client.post("/v1/sweeps/query", json=body)
-
-        assert first.status_code == 202
-        assert second.status_code == 202
-        assert third.status_code == 429
-        assert "Retry-After" in third.headers
-
-        await asyncio.sleep(1.1)
-
-        after_reset = await client.post("/v1/sweeps/query", json=body)
-        assert after_reset.status_code == 202
-    finally:
-        keys = [k async for k in redis.scan_iter("rate_limit:sweeps_query:*")]
-        if keys:
-            await redis.delete(*keys)

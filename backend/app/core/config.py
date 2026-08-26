@@ -7,7 +7,14 @@ this codebase should read ``os.environ`` directly.
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Obviously-placeholder JWT secrets — never a real deployment's actual
+# signing key, so a production boot with one of these still set means the
+# real secret was never supplied (workflows/09: refuse to boot in that case
+# rather than silently signing tokens with a guessable key).
+_PLACEHOLDER_JWT_SECRETS = {"change-me", "changeme", ""}
 
 
 class Settings(BaseSettings):
@@ -81,6 +88,15 @@ class Settings(BaseSettings):
 
     # --- CORS ---
     CORS_ALLOW_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+
+    @model_validator(mode="after")
+    def _refuse_placeholder_jwt_secret_in_production(self) -> "Settings":
+        if self.ENV == "production" and self.JWT_SECRET.strip().lower() in _PLACEHOLDER_JWT_SECRETS:
+            raise ValueError(
+                "JWT_SECRET is still a placeholder but ENV=production — set a real secret "
+                "via the deployment environment's own secret store before booting."
+            )
+        return self
 
 
 @lru_cache

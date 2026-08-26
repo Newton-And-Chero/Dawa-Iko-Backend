@@ -1,0 +1,60 @@
+# Production-shaped override — additive on top of docker-compose.yml, not a
+# duplicate compose file (RULES.md: drift between two full compose files is
+# exactly the kind of duplication to avoid). Run with:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# Differences from the dev file: no source bind-mounts (the image is built
+# once and run as-is), gunicorn managing uvicorn workers instead of a single
+# --reload process, and restart policies so a crashed container comes back
+# without a human watching it. The `!reset` tags below (Compose Spec merge
+# syntax, Docker Compose >= 2.24) clear the dev file's bind-mount list
+# instead of appending to it — requires a reasonably current `docker compose`.
+# Real secrets (DATABASE_URL, JWT_SECRET,
+# CALLE_API_KEY, ...) still come from the deployment environment's own
+# secret store, never from `.env` or this file (RULES.md).
+services:
+  db:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  redis:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  api:
+    command: uv run gunicorn app.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --workers 4
+    volumes: !reset []
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+
+  worker:
+    command: uv run celery -A app.workers.celery_app worker --loglevel=info --concurrency=4
+    volumes: !reset []
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+
+  beat:
+    volumes: !reset []
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M

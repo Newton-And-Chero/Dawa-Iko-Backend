@@ -11,6 +11,10 @@ jobs:
       run:
         working-directory: backend
 
+    # Same images docker-compose.yml's `db`/`redis` services run — CI's
+    # integration stage exercises real Postgres+PostGIS and Redis, matching
+    # what a `docker compose up` would give a developer (workflows/09).
+    # Only CALL-E/SMS are mocked; the DB and cache are not.
     services:
       postgres:
         image: postgis/postgis:16-3.4
@@ -62,5 +66,10 @@ jobs:
       - name: Alembic upgrade head
         run: uv run alembic upgrade head
 
-      - name: Pytest
+      # One pytest run: testpaths=["tests"] already picks up
+      # tests/integration/ alongside every earlier sprint's unit/router
+      # tests, so this is the whole suite — including test_full_sweep_flow,
+      # test_webhook_forgery, and test_rate_limit_abuse — run against the
+      # real Postgres+Redis services above, not a second/duplicate stage.
+      - name: Pytest (full suite, incl. tests/integration)
         run: uv run pytest

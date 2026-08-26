@@ -11,7 +11,7 @@ celery_app = Celery(
     "calle",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["app.workers.sweep_tasks"],
+    include=["app.workers.sweep_tasks", "app.workers.analytics_tasks"],
 )
 
 celery_app.conf.update(

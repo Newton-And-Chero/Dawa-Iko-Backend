@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.api.v1.routers.analytics import router as analytics_router
 from app.api.v1.routers.auth import router as auth_router
 from app.api.v1.routers.availability_results import router as availability_results_router
 from app.api.v1.routers.calls import router as calls_router
@@ -25,3 +26,4 @@ router.include_router(availability_results_router)
 router.include_router(users_router)
 router.include_router(escalations_router)
 router.include_router(subscribers_router)
+router.include_router(analytics_router)
