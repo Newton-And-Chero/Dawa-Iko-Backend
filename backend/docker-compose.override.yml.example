@@ -1,0 +1,18 @@
+# Copy to docker-compose.override.yml (git-ignored, auto-loaded by
+# `docker compose`) and fill in real values for your machine.
+#
+# CALL_DEMO_REDIRECT_NUMBERS is the hackathon call guardrail: when set, every
+# outbound CALL-E call is redirected to one of these numbers instead of the
+# facility's real number, and a single call task covers at most as many
+# facilities as there are numbers listed. Leave it unset (or delete this
+# file) for normal operation, where real facilities are called.
+services:
+  api:
+    environment:
+      CALL_DEMO_REDIRECT_NUMBERS: '["+2547XXXXXXXX","+2547YYYYYYYY"]'
+  worker:
+    environment:
+      CALL_DEMO_REDIRECT_NUMBERS: '["+2547XXXXXXXX","+2547YYYYYYYY"]'
+  beat:
+    environment:
+      CALL_DEMO_REDIRECT_NUMBERS: '["+2547XXXXXXXX","+2547YYYYYYYY"]'

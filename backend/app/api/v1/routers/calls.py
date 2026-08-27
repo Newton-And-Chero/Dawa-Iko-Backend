@@ -23,6 +23,7 @@ from app.application.ports.call_provider_port import CallProviderPort
 from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
 from app.application.use_cases.list_calls import ListCallsUseCase
 from app.application.use_cases.request_manual_call import RequestManualCallUseCase
+from app.core.config import Settings, get_settings
 from app.core.exceptions import NotFoundError
 from app.domain.entities.call import Call
 from app.domain.entities.user import User
@@ -72,6 +73,7 @@ async def retry_call(
     session: AsyncSession = Depends(get_session),
     call_provider: CallProviderPort = Depends(get_call_provider),
     realtime_event_bus: RealtimeEventBusPort = Depends(get_realtime_event_bus),
+    settings: Settings = Depends(get_settings),
 ) -> SweepAccepted:
     use_case = RequestManualCallUseCase(
         call_repository=SqlAlchemyCallRepository(session),
@@ -80,6 +82,7 @@ async def retry_call(
         commodity_repository=SqlAlchemyCommodityRepository(session),
         call_provider=call_provider,
         realtime_event_bus=realtime_event_bus,
+        settings=settings,
     )
     try:
         sweep_id = await use_case.execute_from_call(call_id, requester_id=current_user.id)

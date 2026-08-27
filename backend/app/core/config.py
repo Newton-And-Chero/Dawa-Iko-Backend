@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     # Minimum delay before retrying a no_answer/failed call.
     RETRY_DELAY_HOURS: int = 4
 
+    # --- CALL-E demo guardrail (hackathon) ---
+    # When non-empty, NO real facility number is ever dialed: every outbound
+    # call is redirected to one of these numbers (one per facility, assigned by
+    # position), and a single call task covers at most len(list) facilities —
+    # the rest are dropped from that chunk. JSON array of E.164 numbers. Leave
+    # as [] in production so real facilities are called.
+    CALL_DEMO_REDIRECT_NUMBERS: list[str] = []
+
     # --- SMS (Africa's Talking) ---
     SMS_MODE: Literal["mock", "live"] = "mock"
     AFRICAS_TALKING_USERNAME: str = ""

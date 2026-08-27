@@ -11,6 +11,7 @@ Not a use case itself — an internal helper module for the `use_cases`
 package (hence the leading underscore).
 """
 
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
@@ -37,8 +38,39 @@ from app.domain.entities.sweep import Sweep
 from app.domain.enums import CallListIntent, CallStatus, SweepStatus, SweepTrigger
 from app.domain.services.call_list_policy import chunk as chunk_facilities
 from app.domain.services.call_list_policy import is_cooldown_blocked, prioritize
+from app.domain.services.phone import normalize_phone
 from app.domain.value_objects.call_task_ref import CallRecipient, CallTaskRef
 from app.domain.value_objects.geography_scope import GeographyScope, geography_scope_to_dict
+
+logger = logging.getLogger(__name__)
+
+
+def _resolve_call_phones(
+    facilities: list[Facility], demo_redirect_numbers: list[str] | None
+) -> tuple[list[Facility], list[str]]:
+    """Return the facilities to actually call this chunk and the phone number
+    to dial for each, positionally aligned.
+
+    Normally that's every facility at its own ``phone_number``. But when
+    ``demo_redirect_numbers`` is set (the hackathon guardrail — see
+    ``Settings.CALL_DEMO_REDIRECT_NUMBERS``) no real number is ever dialed:
+    each facility is pinned to a distinct redirect number by position, and any
+    facility past the end of that list is dropped from this chunk so the
+    mapping stays 1:1.
+    """
+    if not demo_redirect_numbers:
+        return facilities, [f.phone_number for f in facilities]
+
+    redirect = [normalize_phone(n) for n in demo_redirect_numbers]
+    kept = facilities[: len(redirect)]
+    if len(kept) < len(facilities):
+        logger.warning(
+            "CALL_DEMO_REDIRECT_NUMBERS active: dialing %d of %d facilities this chunk, "
+            "all redirected to demo numbers",
+            len(kept),
+            len(facilities),
+        )
+    return kept, redirect[: len(kept)]
 
 
 @dataclass
@@ -61,12 +93,19 @@ async def dispatch_call_chunk(
     sweep_id: UUID,
     idempotency_key: str,
     attempt_number: int,
+    demo_redirect_numbers: list[str] | None = None,
 ) -> CallTaskRef:
     """Create Call rows for `facilities` (all belonging to `sweep_id`) and
     place one CALL-E call task covering all of them. Returns immediately once
     CALL-E accepts the task — completion is observed later via the webhook
     pipeline (Sprint 03), never awaited here.
+
+    `demo_redirect_numbers` is the hackathon guardrail: when set, calls are
+    redirected to those numbers and the chunk is capped to their count (see
+    `_resolve_call_phones`).
     """
+    facilities, call_phones = _resolve_call_phones(facilities, demo_redirect_numbers)
+
     now = datetime.now(UTC)
     calls = [
         Call(
@@ -83,11 +122,11 @@ async def dispatch_call_chunk(
 
     recipients = [
         CallRecipient(
-            phones=[facility.phone_number],
+            phones=[phone],
             region=CALLE_RECIPIENT_REGION,
             locale=CALLE_RECIPIENT_LOCALE,
         )
-        for facility in facilities
+        for phone in call_phones
     ]
     call_task = await call_provider.place_call(
         task=build_stock_check_task(commodity_name),
@@ -105,8 +144,8 @@ async def dispatch_call_chunk(
     # can arrive the instant place_call() returns, and a partial write here
     # would leave some rows linked and others silently unreachable forever.
     recipient_by_phone = {r.phones[0]: r for r in call_task.recipients}
-    for call, facility in zip(calls, facilities, strict=True):
-        recipient_ref = recipient_by_phone[facility.phone_number]
+    for call, phone in zip(calls, call_phones, strict=True):
+        recipient_ref = recipient_by_phone[phone]
         call.provider_call_id = call_task.id
         call.provider_recipient_id = recipient_ref.id
     await call_repository.bulk_update(calls)
@@ -174,6 +213,7 @@ async def dispatch_sweep(
             sweep_id=sweep.id,
             idempotency_key=f"{sweep.id}:{index}",
             attempt_number=1,
+            demo_redirect_numbers=deps.settings.CALL_DEMO_REDIRECT_NUMBERS,
         )
 
     await deps.sweep_repository.update_status(sweep.id, SweepStatus.IN_PROGRESS)

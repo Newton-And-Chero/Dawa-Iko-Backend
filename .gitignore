@@ -21,6 +21,7 @@ venv/
 
 # Docker
 *.log
+docker-compose.override.yml
 
 # Celery
 celerybeat-schedule*

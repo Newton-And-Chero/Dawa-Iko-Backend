@@ -151,6 +151,34 @@ async def test_facility_within_cooldown_window_is_excluded(setup: dict) -> None:
     assert {c.facility_id for c in calls} == {facilities[1].id}
 
 
+async def test_demo_redirect_numbers_cap_the_chunk_and_reroute_every_call(setup: dict) -> None:
+    commodity = await setup["commodities"].add(
+        Commodity(name="Carbetocin", category=CommodityCategory.ESSENTIAL_MEDICINE)
+    )
+    facilities = [_facility(i) for i in range(5)]
+    use_case = _use_case(
+        setup,
+        facilities,
+        Settings(
+            MAX_RECIPIENTS_PER_TASK=50,
+            CALL_DEMO_REDIRECT_NUMBERS=["+254792036343", "+254720168641"],
+        ),
+    )
+
+    sweep_id = await use_case.execute(
+        commodity_id=commodity.id, geography=CountyScope(county="Kirinyaga")
+    )
+
+    calls = await setup["calls"].list_by_sweep_id(sweep_id)
+    assert len(calls) == 2  # capped to the number of demo numbers
+    assert all(c.provider_recipient_id is not None for c in calls)
+
+    provider_calls = setup["call_provider"].calls
+    assert len(provider_calls) == 1
+    dialed = {r.phones[0] for r in provider_calls[0]["recipients"]}
+    assert dialed == {"+254792036343", "+254720168641"}
+
+
 async def test_running_twice_in_succession_does_not_recall_cooling_down_facility(
     setup: dict,
 ) -> None:

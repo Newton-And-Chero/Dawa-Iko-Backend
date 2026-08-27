@@ -76,6 +76,7 @@ class RetryFailedCallsUseCase:
                 sweep_id=sweep.id,
                 idempotency_key=f"{sweep.id}:retry:{call.id}:{next_attempt}",
                 attempt_number=next_attempt,
+                demo_redirect_numbers=self._settings.CALL_DEMO_REDIRECT_NUMBERS,
             )
             await self._sweeps.update_status(sweep.id, SweepStatus.IN_PROGRESS)
             retried_count += 1

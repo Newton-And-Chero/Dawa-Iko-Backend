@@ -19,6 +19,7 @@ from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
 from app.application.ports.sweep_repository import SweepRepositoryPort
 from app.application.realtime_events import publish_sweep_status_event
 from app.application.use_cases._sweep_dispatch import dispatch_call_chunk
+from app.core.config import Settings
 from app.core.exceptions import NotFoundError
 from app.domain.entities.sweep import Sweep
 from app.domain.enums import SweepStatus, SweepTrigger
@@ -33,6 +34,7 @@ class RequestManualCallUseCase:
         commodity_repository: CommodityRepositoryPort,
         call_provider: CallProviderPort,
         realtime_event_bus: RealtimeEventBusPort,
+        settings: Settings,
     ) -> None:
         self._calls = call_repository
         self._facilities = facility_repository
@@ -40,6 +42,7 @@ class RequestManualCallUseCase:
         self._commodities = commodity_repository
         self._call_provider = call_provider
         self._realtime_event_bus = realtime_event_bus
+        self._settings = settings
 
     async def execute(
         self, facility_id: UUID, commodity_id: UUID, requester_id: UUID | None = None
@@ -69,6 +72,7 @@ class RequestManualCallUseCase:
             sweep_id=sweep.id,
             idempotency_key=f"{sweep.id}:manual",
             attempt_number=1,
+            demo_redirect_numbers=self._settings.CALL_DEMO_REDIRECT_NUMBERS,
         )
         await self._sweeps.update_status(sweep.id, SweepStatus.IN_PROGRESS)
         await publish_sweep_status_event(

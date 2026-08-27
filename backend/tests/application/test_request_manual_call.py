@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 
 from app.application.use_cases.request_manual_call import RequestManualCallUseCase
+from app.core.config import Settings
 from app.core.exceptions import NotFoundError
 from app.domain.entities.call import Call
 from app.domain.entities.commodity import Commodity
@@ -61,6 +62,7 @@ def _use_case(setup: dict) -> RequestManualCallUseCase:
         commodity_repository=setup["commodities"],
         call_provider=setup["call_provider"],
         realtime_event_bus=InMemoryRealtimeEventBus(),
+        settings=setup.get("settings", Settings()),
     )
 
 
