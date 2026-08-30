@@ -1,11 +1,5 @@
-"""Redis pub/sub channel naming (Sprint 06). Every publisher and every
-WS/SSE subscriber builds channel names through these so the string format
-only lives in one place.
-"""
-
 from uuid import UUID
 
-# Sprint 07's escalation/alert events (`alert.created`, `alert.updated`).
 ALERTS_CHANNEL = "alerts"
 
 

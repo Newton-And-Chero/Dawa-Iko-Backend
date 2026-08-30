@@ -1,5 +1,3 @@
-"""SQLAlchemy implementation of AvailabilityResultRepositoryPort."""
-
 from uuid import UUID
 
 from sqlalchemy import select
@@ -50,8 +48,6 @@ def _to_model(availability_result: AvailabilityResult) -> AvailabilityResultMode
 
 
 class SqlAlchemyAvailabilityResultRepository:
-    """Implements AvailabilityResultRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

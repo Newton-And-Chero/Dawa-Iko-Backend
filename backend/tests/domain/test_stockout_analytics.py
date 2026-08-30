@@ -21,9 +21,9 @@ def test_sweep_stock_summary_pct_in_stock_defaults_full_when_nothing_checked() -
 
 def test_bucket_stockout_rate_groups_by_week() -> None:
     summaries = [
-        _summary(datetime(2026, 1, 5, tzinfo=UTC), 10, 0),  # Monday, week 1 — stockout
-        _summary(datetime(2026, 1, 7, tzinfo=UTC), 10, 8),  # same week — not stockout
-        _summary(datetime(2026, 1, 12, tzinfo=UTC), 10, 2),  # week 2 — stockout at 0.5 threshold
+        _summary(datetime(2026, 1, 5, tzinfo=UTC), 10, 0),
+        _summary(datetime(2026, 1, 7, tzinfo=UTC), 10, 8),
+        _summary(datetime(2026, 1, 12, tzinfo=UTC), 10, 2),
     ]
 
     buckets = bucket_stockout_rate(summaries, threshold_pct=0.5, granularity="week")
@@ -60,9 +60,9 @@ def test_bucket_stockout_rate_empty_input_yields_no_buckets() -> None:
 
 
 def test_streak_computed_from_unordered_input() -> None:
-    oldest = _summary(datetime(2026, 1, 1, tzinfo=UTC), 10, 10)  # full stock
-    middle = _summary(datetime(2026, 1, 8, tzinfo=UTC), 10, 0)  # stockout
-    newest = _summary(datetime(2026, 1, 15, tzinfo=UTC), 10, 0)  # stockout
+    oldest = _summary(datetime(2026, 1, 1, tzinfo=UTC), 10, 10)
+    middle = _summary(datetime(2026, 1, 8, tzinfo=UTC), 10, 0)
+    newest = _summary(datetime(2026, 1, 15, tzinfo=UTC), 10, 0)
 
     streak = compute_stockout_streak([newest, oldest, middle], threshold_pct=0.5)
 

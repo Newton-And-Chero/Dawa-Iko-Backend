@@ -1,7 +1,3 @@
-"""Subscriber request/response schemas — field names mirror the `Subscriber`
-domain entity exactly (Sprint 01), wired to a real router with real data in
-Sprint 07."""
-
 from typing import Any
 from uuid import UUID
 

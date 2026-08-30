@@ -1,5 +1,3 @@
-"""POST /v1/auth/login, GET /v1/auth/me."""
-
 from collections.abc import Awaitable, Callable
 
 from httpx import AsyncClient

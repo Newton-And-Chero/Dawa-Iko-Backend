@@ -1,14 +1,3 @@
-"""WS /ws/sweeps/{sweep_id} — live sweep progress (Sprint 06). On connect,
-sends a `sweep.snapshot` of the sweep's current state (so a client joining
-mid-sweep isn't stuck waiting for the next event), then streams
-`call.status_changed` / `availability_result.created` / `sweep.progress` /
-`sweep.completed` events as they're published.
-
-Deliberately unauthenticated, mirroring `POST /sweeps/query`'s own public
-access (RULES.md/workflows/06): it only ever exposes the one `sweep_id`
-already in the URL, never the full sweep list or the live geography feed.
-"""
-
 import dataclasses
 from datetime import UTC, datetime
 from uuid import UUID
@@ -69,9 +58,6 @@ async def sweep_ws(websocket: WebSocket, sweep_id: UUID) -> None:
             }
         )
         while True:
-            # This route only pushes; nothing meaningful for a client to send.
-            # Awaiting a receive is just how a FastAPI WS handler detects the
-            # client disconnecting (raises WebSocketDisconnect below).
             await websocket.receive_text()
     except WebSocketDisconnect:
         pass

@@ -1,20 +1,3 @@
-"""Seed the database for a demo: facilities + commodities (Sprint 02's
-seed_db.py), then several historical weekly sweeps per watchlist commodity so
-Sprint 08's stockout-rate-over-time view has real (mock-sourced) data before
-any demo (PROJECT.md MVP item 7).
-
-Every sweep here runs against `MockCallEAdapter` — no real phone calls, ever
-(RULES.md). The webhook fires through the real ASGI app/route exactly as a
-live CALL-E delivery would, then each sweep's `Sweep.created_at`/
-`Call.started_at`/`Call.ended_at` are backdated directly against the ORM
-models (there is no repository method for this — SweepRepositoryPort has no
-`update_created_at`, and adding one solely for this script would be a
-premature abstraction) so the historical spread is real rows, not a
-fabricated read-time illusion.
-
-Usage: uv run python -m scripts.seed_demo
-"""
-
 import asyncio
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -40,9 +23,6 @@ from app.main import app
 from app.workers.beat_schedule import WATCHLIST_SWEEPS
 from scripts.seed_db import TEST_USER_PASSWORD, TEST_USERS, run_seed
 
-# How many past weeks of sweep history to backfill per watchlist commodity —
-# matches compute_stockout_analytics.py's own `_SUMMARY_WINDOW`, so the
-# "unavailable for N of the last 8 weeks" line has all 8 weeks to draw on.
 HISTORY_WEEKS = 8
 
 
@@ -54,24 +34,10 @@ async def _run_one_backdated_sweep(
     backdated_at: datetime,
     seed: int,
 ) -> int:
-    """Runs one on-demand sweep against every facility in `county`, waits for
-    every mock webhook to land, then backdates the sweep + its calls to
-    `backdated_at`. Returns the number of facilities called.
-    """
     settings = Settings(
         MAX_RECIPIENTS_PER_TASK=get_settings().MAX_RECIPIENTS_PER_TASK,
-        # Real sweeps never re-call a facility within a week (RULES.md
-        # pharmacy-fatigue rule) — that would block every week but the
-        # first when backfilling history in a tight loop, so it's disabled
-        # for this script only.
         FACILITY_CALL_COOLDOWN_HOURS=0,
     )
-    # A short delay risks the webhook firing before dispatch_call_chunk's own
-    # bulk_update commits provider_call_id onto the Call rows it just
-    # created — under real Postgres latency (unlike the fast local sqlite-ish
-    # round trips the test suite sees), that race lands often enough with a
-    # 50-facility chunk to make the webhook 409 as an "unknown call" and
-    # strand the sweep at in_progress forever. A generous delay avoids it.
     adapter = MockCallEAdapter(http_client=http_client, webhook_delay_seconds=1.5, seed=seed)
 
     async with async_session_factory() as session:
@@ -152,10 +118,7 @@ async def main() -> None:
         f"commodities: {summary.commodities_added} added, "
         f"{summary.commodities_skipped} skipped as already seeded"
     )
-    print(
-        f"users: {summary.users_added} added, "
-        f"{summary.users_skipped} skipped as already seeded"
-    )
+    print(f"users: {summary.users_added} added, {summary.users_skipped} skipped as already seeded")
     print(
         f"subscribers: {summary.subscribers_added} added, "
         f"{summary.subscribers_skipped} skipped as already seeded"

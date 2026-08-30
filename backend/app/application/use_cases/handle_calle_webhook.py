@@ -1,13 +1,6 @@
-"""Validates a CALL-E webhook event and upserts Call + AvailabilityResult rows.
-
-The event's `data` is a raw CALL-E `CallTask` snapshot (untrusted input — CALL-E
-signs nothing, see RULES.md). This use case never trusts it blindly: it only
-ever updates `Call` rows it already has a queued/in_progress record for, and
-deduplicates by event id so a webhook redelivery is a no-op.
-"""
-
+import logging
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
@@ -31,12 +24,14 @@ from app.application.use_cases.dispatch_escalation import (
     NotifierResolver,
 )
 from app.core.config import Settings
-from app.core.exceptions import UnknownCallError
 from app.domain.entities.availability_result import AvailabilityResult
 from app.domain.entities.call import Call
 from app.domain.enums import CallStatus, StockStatus, SweepStatus
 
+logger = logging.getLogger(__name__)
+
 _PENDING_CALL_STATUSES = {CallStatus.QUEUED, CallStatus.IN_PROGRESS}
+_STOCK_VALUES = {status.value for status in StockStatus}
 
 
 def _last_failure_code(recipient: dict[str, Any]) -> str | None:
@@ -59,13 +54,67 @@ def _map_call_status(recipient_status: str, failure_code: str | None) -> CallSta
         if "voicemail" in code:
             return CallStatus.VOICEMAIL
         return CallStatus.FAILED
-    # "pending"/"in_progress" on a terminal webhook shouldn't happen — handle
-    # defensively rather than crash the webhook receiver.
     return CallStatus.IN_PROGRESS
 
 
+def _as_decimal(value: Any) -> Decimal | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def _as_date(value: Any) -> date | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
+
+
+def _as_int(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _as_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        if value.lower() in {"yes", "true"}:
+            return True
+        if value.lower() in {"no", "false"}:
+            return False
+    return None
+
+
+def _quantity_band(value: Any) -> str | None:
+    if isinstance(value, str) and value and value.lower() != "unknown":
+        return value
+    return None
+
+
+def _combine_notes(*parts: Any) -> str | None:
+    seen: list[str] = []
+    for part in parts:
+        text = str(part).strip() if part else ""
+        if text and text not in seen:
+            seen.append(text)
+    return " | ".join(seen) or None
+
+
 def _extract_result_fields(
-    recipient: dict[str, Any], event_type: str, task_confidence: float | None
+    recipient: dict[str, Any],
+    event_type: str,
+    task_confidence: float | None,
+    task_evidence: list[str],
 ) -> dict[str, Any]:
     if event_type == "call.result_validation_failed":
         return {
@@ -80,7 +129,7 @@ def _extract_result_fields(
         }
 
     structured = recipient.get("structured_result")
-    if structured is None:
+    if not isinstance(structured, dict):
         return {
             "in_stock": StockStatus.UNKNOWN,
             "quantity_band": None,
@@ -89,21 +138,20 @@ def _extract_result_fields(
             "can_hold": None,
             "hold_duration_hours": None,
             "confidence": None,
-            "notes": recipient.get("summary") or "No structured result was returned for this call.",
+            "notes": _combine_notes(recipient.get("summary"), "; ".join(task_evidence))
+            or "No structured result was returned for this call.",
         }
 
-    price_kes = structured.get("price_kes")
-    restock_date = structured.get("last_restock_date")
-    hold_hours = structured.get("hold_duration_hours")
+    in_stock = str(structured.get("in_stock") or "unknown").lower()
     return {
-        "in_stock": StockStatus(structured.get("in_stock") or "unknown"),
-        "quantity_band": structured.get("quantity_band"),
-        "price_kes": Decimal(str(price_kes)) if price_kes is not None else None,
-        "last_restock_date": date.fromisoformat(restock_date) if restock_date else None,
-        "can_hold": structured.get("can_hold"),
-        "hold_duration_hours": int(hold_hours) if hold_hours is not None else None,
+        "in_stock": StockStatus(in_stock) if in_stock in _STOCK_VALUES else StockStatus.UNKNOWN,
+        "quantity_band": _quantity_band(structured.get("quantity_band")),
+        "price_kes": _as_decimal(structured.get("price_kes")),
+        "last_restock_date": _as_date(structured.get("last_restock_date")),
+        "can_hold": _as_bool(structured.get("can_hold")),
+        "hold_duration_hours": _as_int(structured.get("hold_duration_hours")),
         "confidence": task_confidence,
-        "notes": structured.get("notes"),
+        "notes": _combine_notes(structured.get("notes"), "; ".join(task_evidence)),
     }
 
 
@@ -135,44 +183,56 @@ class HandleCalleWebhookUseCase:
         self._settings = settings
 
     async def handle(self, *, event_id: str, event_type: str, call_data: dict[str, Any]) -> None:
-        is_new = await self._events.mark_processed(event_id)
-        if not is_new:
-            return  # redelivery of an event we've already processed — no-op
+        if await self._events.was_processed(event_id):
+            return
 
         provider_call_id = call_data["id"]
         calls = await self._calls.list_by_provider_call_id(provider_call_id)
-        pending_by_recipient = {
-            call.provider_recipient_id: call
-            for call in calls
-            if call.status in _PENDING_CALL_STATUSES
-        }
-        if not pending_by_recipient:
-            raise UnknownCallError(
-                f"no queued/in_progress Call rows for provider_call_id={provider_call_id!r}"
+        if not calls:
+            logger.warning(
+                "CALL-E webhook %s references unknown provider_call_id=%r; acknowledging "
+                "without changes",
+                event_id,
+                provider_call_id,
             )
+            return
+
+        calls_by_recipient = {call.provider_recipient_id: call for call in calls}
 
         confidence_data = call_data.get("completion_confidence")
-        task_confidence = confidence_data["score"] if confidence_data else None
+        task_confidence = (
+            confidence_data.get("score") if isinstance(confidence_data, dict) else None
+        )
+        task_evidence = [str(item) for item in call_data.get("evidence") or []]
 
         commodity_id_by_sweep: dict[UUID, UUID] = {}
         touched_sweep_ids: set[UUID] = set()
         for recipient in call_data.get("recipients", []):
-            call = pending_by_recipient.get(recipient.get("id"))
+            call = calls_by_recipient.get(recipient.get("id"))
             if call is None:
                 continue
             commodity_id = await self._resolve_commodity_id(call.sweep_id, commodity_id_by_sweep)
-            await self._apply_recipient(call, recipient, event_type, task_confidence, commodity_id)
+            if commodity_id is None:
+                continue
+            await self._apply_recipient(
+                call, recipient, event_type, task_confidence, task_evidence, commodity_id
+            )
             touched_sweep_ids.add(call.sweep_id)
 
         for sweep_id in touched_sweep_ids:
             await self._maybe_complete_sweep(sweep_id)
 
+        await self._events.mark_processed(event_id)
+
     async def _maybe_complete_sweep(self, sweep_id: UUID) -> None:
-        """Flip Sweep.status to completed once every Call in it is terminal,
-        then publish the sweep's current progress either way — this call's
-        webhook always moves the sweep's state forward."""
+        sweep = await self._sweeps.get_by_id(sweep_id)
+        already_completed = sweep is not None and sweep.status == SweepStatus.COMPLETED
         calls = await self._calls.list_by_sweep_id(sweep_id)
-        if calls and all(call.status not in _PENDING_CALL_STATUSES for call in calls):
+        if (
+            not already_completed
+            and calls
+            and all(call.status not in _PENDING_CALL_STATUSES for call in calls)
+        ):
             await self._sweeps.update_status(sweep_id, SweepStatus.COMPLETED)
             await self._detect_and_dispatch_stockout(sweep_id)
         await publish_sweep_status_event(
@@ -195,11 +255,14 @@ class HandleCalleWebhookUseCase:
                 notifier_resolver=self._notifier_resolver,
             ).execute(alert)
 
-    async def _resolve_commodity_id(self, sweep_id: UUID, cache: dict[UUID, UUID]) -> UUID:
+    async def _resolve_commodity_id(self, sweep_id: UUID, cache: dict[UUID, UUID]) -> UUID | None:
         if sweep_id not in cache:
             sweep = await self._sweeps.get_by_id(sweep_id)
             if sweep is None:
-                raise UnknownCallError(f"sweep {sweep_id} referenced by call not found")
+                logger.warning(
+                    "sweep %s referenced by call not found; skipping recipient", sweep_id
+                )
+                return None
             cache[sweep_id] = sweep.commodity_id
         return cache[sweep_id]
 
@@ -209,6 +272,7 @@ class HandleCalleWebhookUseCase:
         recipient: dict[str, Any],
         event_type: str,
         task_confidence: float | None,
+        task_evidence: list[str],
         commodity_id: UUID,
     ) -> None:
         call.status = _map_call_status(recipient["status"], _last_failure_code(recipient))
@@ -221,7 +285,7 @@ class HandleCalleWebhookUseCase:
                 self._realtime_event_bus, call, county=facility.county, commodity_id=commodity_id
             )
 
-        fields = _extract_result_fields(recipient, event_type, task_confidence)
+        fields = _extract_result_fields(recipient, event_type, task_confidence, task_evidence)
         existing = await self._results.get_by_call_id(call.id)
         if existing is not None:
             for key, value in fields.items():

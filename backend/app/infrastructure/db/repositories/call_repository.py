@@ -1,5 +1,3 @@
-"""SQLAlchemy implementation of CallRepositoryPort."""
-
 from uuid import UUID
 
 from sqlalchemy import select
@@ -43,8 +41,6 @@ def _to_model(call: Call) -> CallModel:
 
 
 class SqlAlchemyCallRepository:
-    """Implements CallRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
@@ -73,16 +69,6 @@ class SqlAlchemyCallRepository:
         return _to_domain(model)
 
     async def bulk_update(self, calls: list[Call]) -> None:
-        """Update multiple Call rows in a single commit.
-
-        Used to link a whole chunk's provider_call_id/provider_recipient_id
-        atomically after `place_call()` returns: a real (or mock) webhook can
-        arrive the instant CALL-E accepts the task, so linking rows one at a
-        time — each with its own commit — leaves a window where the webhook
-        finds some rows still unlinked and silently skips them forever. A
-        single commit means the webhook either sees every row linked or none
-        of them (an explicit UnknownCallError to retry), never a partial set.
-        """
         for call in calls:
             model = await self._session.get(CallModel, call.id)
             if model is None:

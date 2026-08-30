@@ -1,12 +1,3 @@
-"""GET /sweeps/{sweep_id}/stream — SSE fallback for `WS /ws/sweeps/{sweep_id}`
-(Sprint 06): the same `sweep:{sweep_id}` event source, for clients that only
-need one-directional streaming (PROJECT.md 2.6 lists both WS and SSE as
-acceptable).
-
-Public, mirroring `POST /sweeps/query`'s own access and the sweep WS route's
-(RULES.md/workflows/06) — it only ever exposes the one `sweep_id` in the URL.
-"""
-
 import dataclasses
 import json
 from collections.abc import AsyncIterator

@@ -1,5 +1,3 @@
-"""Repository round-trip integration tests. Requires a real Postgres+PostGIS instance."""
-
 import uuid
 from decimal import Decimal
 

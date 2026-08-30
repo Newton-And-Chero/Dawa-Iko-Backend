@@ -1,7 +1,3 @@
-"""Value objects analytics reads are shaped around — plain data, no
-framework imports. `AnalyticsRepositoryPort` implementations return these;
-the domain services and use cases in Sprint 08 consume them."""
-
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
@@ -9,9 +5,6 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class SweepStockSummary:
-    """One sweep's aggregate stock outcome — the building block for both the
-    bucketed stockout-rate view and the consecutive-streak view."""
-
     sweep_id: UUID
     created_at: datetime
     facilities_checked_count: int

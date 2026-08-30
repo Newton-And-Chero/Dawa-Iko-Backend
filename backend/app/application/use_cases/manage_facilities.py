@@ -1,5 +1,3 @@
-"""Manual facility add/edit and phone-verification state transitions."""
-
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
@@ -43,7 +41,6 @@ class ManageFacilitiesUseCase:
         self._facility_repository = facility_repository
 
     async def add_facility(self, new_facility: NewFacility) -> Facility:
-        """Add a facility not sourced from an import — e.g. a private chemist."""
         phone = validate_phone(new_facility.phone_number)
         facility = Facility(
             name=new_facility.name,

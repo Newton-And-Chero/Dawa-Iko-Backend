@@ -1,9 +1,3 @@
-"""DispatchEscalationUseCase against real notifier adapters: MockSMSAdapter
-and WebhookNotifier (posting to a local test HTTP endpoint, not the open
-internet). Confirms both channels are exercised per subscriber preference,
-and that one subscriber's simulated failure never blocks another's delivery.
-"""
-
 from typing import Any
 from uuid import uuid4
 

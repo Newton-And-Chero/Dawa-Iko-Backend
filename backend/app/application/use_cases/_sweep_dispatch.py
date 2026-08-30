@@ -1,16 +1,3 @@
-"""Shared dispatch pipeline behind `run_on_demand_sweep` and
-`run_scheduled_sweep` — the only difference between the two triggers is
-`trigger_type` and whether a human `requester_id` exists, so the resolve ->
-cooldown-filter -> prioritize -> chunk -> dispatch pipeline lives here once.
-
-`dispatch_call_chunk` is also reused by `retry_failed_calls` and
-`request_manual_call`, which dispatch a single facility outside the full
-sweep pipeline (a retry, or a deliberate "call this now").
-
-Not a use case itself — an internal helper module for the `use_cases`
-package (hence the leading underscore).
-"""
-
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -39,7 +26,11 @@ from app.domain.enums import CallListIntent, CallStatus, SweepStatus, SweepTrigg
 from app.domain.services.call_list_policy import chunk as chunk_facilities
 from app.domain.services.call_list_policy import is_cooldown_blocked, prioritize
 from app.domain.services.phone import normalize_phone
-from app.domain.value_objects.call_task_ref import CallRecipient, CallTaskRef
+from app.domain.value_objects.call_task_ref import (
+    CallRecipient,
+    CallRecipientResultRef,
+    CallTaskRef,
+)
 from app.domain.value_objects.geography_scope import GeographyScope, geography_scope_to_dict
 
 logger = logging.getLogger(__name__)
@@ -48,16 +39,6 @@ logger = logging.getLogger(__name__)
 def _resolve_call_phones(
     facilities: list[Facility], demo_redirect_numbers: list[str] | None
 ) -> tuple[list[Facility], list[str]]:
-    """Return the facilities to actually call this chunk and the phone number
-    to dial for each, positionally aligned.
-
-    Normally that's every facility at its own ``phone_number``. But when
-    ``demo_redirect_numbers`` is set (the hackathon guardrail — see
-    ``Settings.CALL_DEMO_REDIRECT_NUMBERS``) no real number is ever dialed:
-    each facility is pinned to a distinct redirect number by position, and any
-    facility past the end of that list is dropped from this chunk so the
-    mapping stays 1:1.
-    """
     if not demo_redirect_numbers:
         return facilities, [f.phone_number for f in facilities]
 
@@ -95,15 +76,6 @@ async def dispatch_call_chunk(
     attempt_number: int,
     demo_redirect_numbers: list[str] | None = None,
 ) -> CallTaskRef:
-    """Create Call rows for `facilities` (all belonging to `sweep_id`) and
-    place one CALL-E call task covering all of them. Returns immediately once
-    CALL-E accepts the task — completion is observed later via the webhook
-    pipeline (Sprint 03), never awaited here.
-
-    `demo_redirect_numbers` is the hackathon guardrail: when set, calls are
-    redirected to those numbers and the chunk is capped to their count (see
-    `_resolve_call_phones`).
-    """
     facilities, call_phones = _resolve_call_phones(facilities, demo_redirect_numbers)
 
     now = datetime.now(UTC)
@@ -138,19 +110,40 @@ async def dispatch_call_chunk(
         metadata={"sweep_id": str(sweep_id)},
     )
 
-    # CALL-E assigns its own opaque recipient ids — match them back to our
-    # Call rows by phone number so the webhook handler can find them later.
-    # Linked in one bulk_update (one commit) rather than per-row: a webhook
-    # can arrive the instant place_call() returns, and a partial write here
-    # would leave some rows linked and others silently unreachable forever.
-    recipient_by_phone = {r.phones[0]: r for r in call_task.recipients}
-    for call, phone in zip(calls, call_phones, strict=True):
-        recipient_ref = recipient_by_phone[phone]
+    recipients_in_order = _recipients_in_request_order(call_task, call_phones)
+    for call, phone, recipient_ref in zip(calls, call_phones, recipients_in_order, strict=True):
         call.provider_call_id = call_task.id
-        call.provider_recipient_id = recipient_ref.id
+        call.provider_recipient_id = recipient_ref.id if recipient_ref is not None else None
+        if recipient_ref is None:
+            logger.warning(
+                "CALL-E task %s returned no recipient matching phone %s; webhook results "
+                "for this call cannot be correlated",
+                call_task.id,
+                phone,
+            )
     await call_repository.bulk_update(calls)
 
     return call_task
+
+
+def _recipients_in_request_order(
+    call_task: CallTaskRef, call_phones: list[str]
+) -> list[CallRecipientResultRef | None]:
+    originals = list(call_task.recipients)
+    used: set[int] = set()
+    ordered: list[CallRecipientResultRef | None] = []
+    for index, phone in enumerate(call_phones):
+        pick = next(
+            (i for i, r in enumerate(originals) if i not in used and phone in r.phones), None
+        )
+        if pick is None and index < len(originals) and index not in used:
+            pick = index
+        if pick is None:
+            ordered.append(None)
+            continue
+        used.add(pick)
+        ordered.append(originals[pick])
+    return ordered
 
 
 async def dispatch_sweep(
@@ -192,12 +185,6 @@ async def dispatch_sweep(
     )
 
     if not chunks:
-        # No candidates survived resolution/cooldown — nothing to wait on.
-        # Deliberately does not run stockout detection (workflows/07): a sweep
-        # that completes here always has facilities_checked_count == 0, and
-        # classify_severity treats that as "nothing to detect" by contract —
-        # there is no false-positive stockout to guard against, so there is
-        # nothing this path could ever find.
         await deps.sweep_repository.update_status(sweep.id, SweepStatus.COMPLETED)
         await publish_sweep_status_event(
             deps.realtime_event_bus, deps.sweep_repository, deps.call_repository, sweep.id

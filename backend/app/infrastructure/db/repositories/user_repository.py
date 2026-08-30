@@ -1,5 +1,3 @@
-"""SQLAlchemy implementation of UserRepositoryPort."""
-
 from uuid import UUID
 
 from sqlalchemy import select
@@ -32,8 +30,6 @@ def _to_model(user: User) -> UserModel:
 
 
 class SqlAlchemyUserRepository:
-    """Implements UserRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

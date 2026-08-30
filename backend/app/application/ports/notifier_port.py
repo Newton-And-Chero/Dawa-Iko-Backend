@@ -1,7 +1,3 @@
-"""Port for sending one notification (SMS/email/webhook) — the concrete
-channel is chosen per `Subscriber.notification_channel`, so every adapter
-implements the same `send()` signature regardless of transport."""
-
 from typing import Any, Protocol
 
 from app.domain.enums import NotificationChannel

@@ -1,10 +1,3 @@
-"""Facility CRUD — thin wrappers over Sprint 02's use cases.
-
-`Facility.phone_number` is present on every response here, so every route
-requires at least `viewer` (RULES.md's data-minimization default for
-anything containing a phone number) — nothing in this router is `public`.
-"""
-
 import dataclasses
 from uuid import UUID
 

@@ -1,10 +1,3 @@
-"""On-demand sweep: commodity + geography -> resolve -> throttle -> chunk ->
-dispatch. Returns a `sweep_id` immediately once calls are placed with
-CALL-E — completion is observed later via the webhook pipeline (Sprint 03),
-never awaited here. This signature is what Sprint 05's public query endpoint
-calls directly.
-"""
-
 from uuid import UUID
 
 from app.application.ports.call_provider_port import CallProviderPort

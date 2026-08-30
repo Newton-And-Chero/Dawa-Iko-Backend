@@ -1,8 +1,3 @@
-"""Settings-driven NotifierPort selection per channel — same pattern as
-`call_e/factory.py` and `facility_import/factory.py`. `MockSMSAdapter` is
-stateful (records `.sent` for test assertions) so, like `MockCallEAdapter`,
-it's a shared instance per process rather than fresh per call."""
-
 from app.application.ports.notifier_port import NotifierPort
 from app.core.config import Settings
 from app.domain.enums import NotificationChannel

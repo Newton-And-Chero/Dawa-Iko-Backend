@@ -1,5 +1,3 @@
-"""POST /auth/login, GET /auth/me."""
-
 import dataclasses
 
 from fastapi import APIRouter, Depends, HTTPException

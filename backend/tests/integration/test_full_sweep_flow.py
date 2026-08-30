@@ -1,12 +1,3 @@
-"""The sprint's real definition of done (workflows/09): one path exercising
-Sprints 03 through 08 together — `POST /sweeps/query` -> mock CALL-E
-dispatch -> mock webhook lands on the real route -> `AvailabilityResult`
-rows persisted -> a connected WS client sees the sweep complete live ->
-`GET /analytics/stockout-rate` reflects the new sweep. If this test doesn't
-pass, the backend is not a "fully working product" yet, regardless of what
-any individual sprint's own tests say.
-"""
-
 import contextlib
 from collections.abc import AsyncGenerator, Awaitable, Callable
 
@@ -29,9 +20,6 @@ from app.main import app
 
 @pytest_asyncio.fixture
 async def ws_client() -> AsyncGenerator[AsyncClient, None]:
-    """Speaks the ASGI `websocket` scope, unlike the plain `client` fixture's
-    HTTP-only `ASGITransport` — see tests/infrastructure/test_realtime.py for
-    the full rationale (manual `__aenter__`/`__aexit__` included)."""
     ac = AsyncClient(transport=ASGIWebSocketTransport(app=app), base_url="http://test")
     await ac.__aenter__()
     try:
@@ -71,13 +59,6 @@ async def test_query_to_analytics_end_to_end(
 ) -> None:
     commodity = await _seed_commodity_and_facilities(db_session)
 
-    # The real dispatch path (`get_call_provider`) defaults to a *shared*
-    # MockCallEAdapter wired to a bare `httpx.AsyncClient()` — a real socket
-    # client, so its webhook fire is a real network round trip to
-    # `PUBLIC_BASE_URL` (see app/infrastructure/call_e/factory.py). That's
-    # fine for a live deployment but not for a hermetic test: override it
-    # with an adapter bound to this app's own ASGI transport, exactly as
-    # `get_call_provider`'s own docstring says a test should.
     webhook_http_client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
     adapter = MockCallEAdapter(http_client=webhook_http_client, webhook_delay_seconds=0.3, seed=11)
     app.dependency_overrides[get_call_provider] = lambda: adapter
@@ -93,9 +74,6 @@ async def test_query_to_analytics_end_to_end(
         assert query_response.status_code == 202
         sweep_id = query_response.json()["sweep_id"]
 
-        # Connect before the deferred webhook fires (0.3s delay budgets
-        # plenty of room for an in-process WS handshake), so the live event
-        # stream — not just the eventual REST state — is actually observed.
         ws: AsyncWebSocketSession
         async with aconnect_ws(f"/ws/sweeps/{sweep_id}", ws_client) as ws:
             snapshot = await ws.receive_json()

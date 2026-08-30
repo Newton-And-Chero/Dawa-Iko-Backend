@@ -1,11 +1,3 @@
-"""Realtime event envelope + publish helpers (Sprint 06) — the versioned
-contract documented in `docs/realtime-contract.md`. Centralized here so every
-call site that already produces a Sweep/Call/AvailabilityResult state change
-adds one `publish_*` call rather than hand-rolling envelopes or duplicating
-the "how do I get a sweep's current progress" query (RULES.md: no duplicated
-logic, no second write/read path).
-"""
-
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -78,10 +70,6 @@ async def publish_sweep_status_event(
     call_repository: CallRepositoryPort,
     sweep_id: UUID,
 ) -> None:
-    """Publishes `sweep.completed` or `sweep.progress` for the sweep's
-    *current* status — call this right after `sweep_repository.update_status`
-    so the payload reflects the flip that just happened. Reuses
-    `GetSweepStatusUseCase` rather than re-deriving call counts here."""
     progress = await GetSweepStatusUseCase(sweep_repository, call_repository).execute(sweep_id)
     event_type = "sweep.completed" if progress.status == SweepStatus.COMPLETED else "sweep.progress"
     data = {

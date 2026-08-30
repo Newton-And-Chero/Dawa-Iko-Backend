@@ -1,5 +1,3 @@
-"""Admin-only user management."""
-
 import dataclasses
 from uuid import UUID
 

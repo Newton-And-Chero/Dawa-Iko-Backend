@@ -1,5 +1,3 @@
-"""SQLAlchemy implementation of StockoutAlertRepositoryPort."""
-
 from uuid import UUID
 
 from sqlalchemy import Text, cast, select
@@ -40,8 +38,6 @@ def _to_model(stockout_alert: StockoutAlert) -> StockoutAlertModel:
 
 
 class SqlAlchemyStockoutAlertRepository:
-    """Implements StockoutAlertRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

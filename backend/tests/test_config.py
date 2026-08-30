@@ -1,6 +1,3 @@
-"""Settings safety guards (Sprint 09): refuse to boot in production with an
-obviously-placeholder JWT secret."""
-
 from typing import Literal
 
 import pytest

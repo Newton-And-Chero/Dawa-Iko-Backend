@@ -1,11 +1,3 @@
-"""Celery Beat-scheduled retry of no_answer/failed calls, within the
-attempt cap and retry-timing rules (see `call_list_policy.is_eligible_for_retry`).
-
-Each retried call is dispatched as a new single-recipient call task with
-`attempt_number` incremented — never mutating the original (terminal) Call
-row, so its history stays intact.
-"""
-
 from dataclasses import dataclass
 from datetime import UTC, datetime
 

@@ -1,8 +1,3 @@
-"""List/filter/rank availability results — the endpoint a "where can I get
-X" view is built from (PROJECT.md 2.7's query view spec): in-stock results
-first, most confident first, per commodity/geography/date-range/stock-status.
-"""
-
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
@@ -17,8 +12,6 @@ from app.domain.enums import StockStatus
 @dataclass
 class AvailabilityResultFilter:
     commodity_id: UUID | None = None
-    # Facility.county exact match — availability results don't carry
-    # geography themselves, so filtering by it is a join at the repository.
     county: str | None = None
     date_from: datetime | None = None
     date_to: datetime | None = None

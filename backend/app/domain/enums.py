@@ -1,5 +1,3 @@
-"""Domain enums shared across entities. Pure Python — no framework imports."""
-
 from enum import StrEnum
 
 
@@ -82,7 +80,5 @@ class PhoneVerificationStatus(StrEnum):
 
 
 class CallListIntent(StrEnum):
-    """Which facility type a call-list sweep should reach first (PROJECT.md 2.2)."""
-
     PUBLIC_FIRST = "public_first"
     PRIVATE_FIRST = "private_first"

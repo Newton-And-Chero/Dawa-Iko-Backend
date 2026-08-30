@@ -1,5 +1,3 @@
-"""build_call_provider: mode selection and the mock's singleton lifetime."""
-
 from app.core.config import Settings
 from app.infrastructure.call_e.calle_adapter import CallEAdapter
 from app.infrastructure.call_e.factory import build_call_provider

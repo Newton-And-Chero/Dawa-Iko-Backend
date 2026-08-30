@@ -1,8 +1,3 @@
-"""Mock facility-directory adapter — reads local seed JSON files.
-
-Stands in for a real KMHFL export until RealKMHFLAdapter is implemented.
-"""
-
 import json
 from pathlib import Path
 
@@ -11,8 +6,6 @@ from app.domain.enums import FacilitySource, FacilityType
 
 
 class MockKMHFLAdapter:
-    """Implements FacilityImportPort by reading data/seed/*.json seed files."""
-
     def __init__(self, seed_paths: list[Path]) -> None:
         self._seed_paths = seed_paths
 

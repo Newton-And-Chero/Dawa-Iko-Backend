@@ -1,8 +1,3 @@
-"""ComputeStockoutAnalyticsUseCase — orchestration against in-memory fakes.
-Bucketing/streak math itself is covered by tests/domain/test_stockout_analytics.py;
-these tests cover the use case's own job: commodity lookup and the
-human-readable summary line."""
-
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -43,7 +38,7 @@ async def test_summary_counts_stockout_periods_in_recent_window() -> None:
     result = await use_case.execute(commodity.id, geography="Kirinyaga")
 
     assert len(result.buckets) == 2
-    assert result.streak.current_streak == 0  # most recent week fully stocked
+    assert result.streak.current_streak == 0
     assert result.streak.longest_streak == 1
     assert result.summary == "Carbetocin unavailable in Kirinyaga for 1 of the last 2 weeks"
 

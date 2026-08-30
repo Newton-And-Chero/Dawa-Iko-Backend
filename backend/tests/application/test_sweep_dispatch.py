@@ -1,6 +1,3 @@
-"""`_resolve_call_phones` — the hackathon call guardrail behind
-`CALL_DEMO_REDIRECT_NUMBERS`. Pure, no DB."""
-
 from app.application.use_cases._sweep_dispatch import _resolve_call_phones
 from app.domain.entities.facility import Facility
 from app.domain.enums import FacilitySource, FacilityType

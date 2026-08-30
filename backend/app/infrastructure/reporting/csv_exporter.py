@@ -1,7 +1,3 @@
-"""CSV rendering for Sprint 08 analytics reports. Each `export_*_csv`
-function shapes one report's rows into a flat table; `_write_csv` is the one
-shared plumbing bit (stdlib `csv.DictWriter` over an in-memory buffer)."""
-
 import csv
 import io
 from collections.abc import Iterable, Mapping

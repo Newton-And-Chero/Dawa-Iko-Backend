@@ -1,20 +1,3 @@
-"""WS /ws/live?county=&commodity_id=&token= — live geography/commodity feed
-behind the dashboard's availability map (PROJECT.md 2.7). On connect, sends a
-`geography.snapshot` of the current ranked availability results for that
-county+commodity, then streams the same `call.status_changed` /
-`availability_result.created` events the matching sweep(s) publish (Sprint
-06), fanned out to this channel by `app.application.realtime_events`.
-
-Auth: JWT passed as the `token` query param, not a header or WS subprotocol.
-A browser's native WebSocket API can't set custom headers on the handshake
-request, and encoding the token into `Sec-WebSocket-Protocol` only trades
-that problem for subprotocol-negotiation complexity with no real benefit
-here — a query param is the simplest of the two documented options
-(workflows/06). Unlike the public per-sweep stream, this channel aggregates
-availability data county-wide, so it requires at least a `viewer` token
-(RULES.md's data-minimization default), not just a valid one.
-"""
-
 import dataclasses
 from datetime import UTC, datetime
 from uuid import UUID

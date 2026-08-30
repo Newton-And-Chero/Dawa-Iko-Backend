@@ -1,12 +1,3 @@
-"""Seed the database with mock Kenyan facility/commodity data, plus a fixed
-set of test login accounts and alert subscribers so every role-gated screen
-and the escalation/subscriber management screens have something to show
-without a chicken-and-egg "no user exists yet to create the first user"
-problem (`POST /users` is admin-only — see docs/api.md).
-
-Usage: uv run python -m scripts.seed_db
-"""
-
 import asyncio
 import json
 from dataclasses import dataclass
@@ -28,9 +19,6 @@ from app.infrastructure.facility_import.mock_kmhfl_adapter import MockKMHFLAdapt
 
 COMMODITY_SEED_FILE = SEED_DATA_DIR / "commodities_keml.json"
 
-# Fixed (not random) so re-running the script, or a frontend dev reading this
-# file, always gets the same login. Never used outside `mock`-mode local/dev
-# deployments — these credentials are not a secret worth rotating.
 TEST_USER_PASSWORD = "testpass123"
 TEST_USERS = [
     NewUser(
@@ -56,16 +44,13 @@ TEST_USERS = [
     ),
 ]
 
-# keml_code here, resolved to a real commodity id at seed time (mirrors
-# WATCHLIST_SWEEPS in app/workers/beat_schedule.py) — commodity UUIDs don't
-# exist until commodities are seeded.
 TEST_SUBSCRIBERS = [
     {
         "name": "Kirinyaga County Pharmacist",
         "notification_channel": NotificationChannel.SMS,
         "org": "MOH Kirinyaga",
         "phone": "+254700000010",
-        "watchlist_keml_codes": ["KEML-SYN-0001"],  # Carbetocin
+        "watchlist_keml_codes": ["KEML-SYN-0001"],
         "watchlist_geography": {"kind": "county", "county": "Kirinyaga"},
     },
     {
@@ -73,7 +58,7 @@ TEST_SUBSCRIBERS = [
         "notification_channel": NotificationChannel.SMS,
         "org": "MOH Nairobi",
         "phone": "+254700000011",
-        "watchlist_keml_codes": ["KEML-SYN-0003"],  # Human Insulin (Soluble)
+        "watchlist_keml_codes": ["KEML-SYN-0003"],
         "watchlist_geography": {"kind": "county", "county": "Nairobi"},
     },
     {
@@ -153,9 +138,7 @@ async def _seed_subscribers(session: AsyncSession) -> tuple[int, int]:
             skipped += 1
             continue
         watchlist_commodities = [
-            by_keml_code[code].id
-            for code in raw["watchlist_keml_codes"]
-            if code in by_keml_code
+            by_keml_code[code].id for code in raw["watchlist_keml_codes"] if code in by_keml_code
         ]
         await manage.add_subscriber(
             NewSubscriber(
@@ -174,22 +157,11 @@ async def _seed_subscribers(session: AsyncSession) -> tuple[int, int]:
 
 
 async def run_seed(session: AsyncSession) -> SeedSummary:
-    """Run facility/commodity import, then test-user and test-subscriber
-    seeding, against the given session.
-
-    Idempotent: a second run against the same DB reports 0 new facilities
-    (all duplicates by phone), 0 new commodities (all already seeded by
-    keml_code), 0 new users (all already seeded by phone_number), and 0 new
-    subscribers (all already seeded by name).
-    """
     facility_repository = SqlAlchemyFacilityRepository(session)
     import_port = MockKMHFLAdapter(seed_paths=DEFAULT_SEED_FILES)
     facility_result = await ImportFacilitiesUseCase(import_port, facility_repository).execute()
 
     commodities_added, commodities_skipped = await _seed_commodities(session)
-    # Users/subscribers seed independently of facilities/commodities, but
-    # subscriber watchlists reference commodity ids, so commodities must be
-    # seeded first.
     users_added, users_skipped = await _seed_users(session)
     subscribers_added, subscribers_skipped = await _seed_subscribers(session)
 
@@ -216,19 +188,13 @@ async def main() -> None:
         f"commodities: {summary.commodities_added} added, "
         f"{summary.commodities_skipped} skipped as already seeded"
     )
-    print(
-        f"users: {summary.users_added} added, "
-        f"{summary.users_skipped} skipped as already seeded"
-    )
+    print(f"users: {summary.users_added} added, {summary.users_skipped} skipped as already seeded")
     print(
         f"subscribers: {summary.subscribers_added} added, "
         f"{summary.subscribers_skipped} skipped as already seeded"
     )
     if summary.users_added:
-        print(
-            "\ntest login accounts (password for all: "
-            f"{TEST_USER_PASSWORD}):"
-        )
+        print(f"\ntest login accounts (password for all: {TEST_USER_PASSWORD}):")
         for user in TEST_USERS:
             print(f"  {user.role.value:8s} {user.phone_number}")
 

@@ -1,10 +1,3 @@
-"""Tracks active WS connections per Redis channel and relays bus events to
-them (Sprint 06). One process-wide `ConnectionManager` — a channel's Redis
-subscription is opened once and shared by every locally-connected client on
-it, not once per client, so N clients watching the same sweep each get the
-event exactly once without N redundant Redis subscriptions.
-"""
-
 import asyncio
 import contextlib
 from collections import defaultdict

@@ -1,8 +1,3 @@
-"""Stockout rate/duration analytics for a commodity+geography — PROJECT.md
-2.7/2.8's "carbetocin unavailable in this ward for 6 of the last 8 weeks"
-framing. Read/derive only (workflows/08): never writes Sweep/Call/
-AvailabilityResult data."""
-
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
@@ -18,9 +13,6 @@ from app.domain.services.stockout_analytics import (
     compute_stockout_streak,
 )
 
-# How many of the most recent buckets the human-readable `summary` line
-# covers, e.g. "...for 6 of the last 8 weeks" — matches PROJECT.md's own
-# example window.
 _SUMMARY_WINDOW = 8
 
 

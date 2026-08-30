@@ -1,5 +1,3 @@
-"""Commodity CRUD — thin wrappers over Sprint 02's use cases."""
-
 import dataclasses
 from uuid import UUID
 

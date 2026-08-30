@@ -1,12 +1,3 @@
-"""MockCallEAdapter round trip: place_call() with N recipients -> webhook fires
--> AvailabilityResult rows exist for all N facilities.
-
-Uses a real `httpx.AsyncClient` bound to the running FastAPI app via ASGI
-transport (no real sockets, no separate server process), so the actual
-webhook route and `handle_calle_webhook` use case are exercised end-to-end,
-not bypassed — per workflows/03's "not an in-process function call" rule.
-"""
-
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -97,13 +88,6 @@ async def test_mock_calle_adapter_round_trip(db_session: AsyncSession) -> None:
             metadata={"sweep_id": str(sweep.id)},
         )
 
-        # Simulates what Sprint 04's dispatch will do: link the ids CALL-E
-        # just returned back onto our Call rows (matched by phone number,
-        # since CALL-E assigns its own opaque recipient ids) before the
-        # deferred webhook lands. One bulk_update (one commit), not a
-        # per-row update loop: the mock webhook can fire the instant
-        # place_call() returns, and a partial write here would leave some
-        # rows linked and others silently unreachable when it does.
         recipient_by_phone = {r.phones[0]: r for r in call_task.recipients}
         for call, facility in zip(calls, facilities, strict=True):
             recipient_ref = recipient_by_phone[facility.phone_number]

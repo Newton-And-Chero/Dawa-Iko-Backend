@@ -1,5 +1,3 @@
-"""Result of one NotifierPort.send() call."""
-
 from dataclasses import dataclass
 
 from app.domain.enums import NotificationChannel

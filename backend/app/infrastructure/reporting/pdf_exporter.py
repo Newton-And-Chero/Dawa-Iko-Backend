@@ -1,9 +1,3 @@
-"""PDF rendering for Sprint 08 analytics reports, via reportlab (pure
-Python — no system-level rendering dependency, unlike weasyprint's Pango/
-Cairo requirement). `_render_table` is the one shared plumbing bit; each
-`export_*_pdf` function shapes one report's rows into a title + header row +
-data rows."""
-
 import io
 from collections.abc import Sequence
 from typing import Any

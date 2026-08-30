@@ -1,5 +1,3 @@
-"""End-to-end test for scripts/seed_db.py against a real DB."""
-
 import json
 
 from sqlalchemy.ext.asyncio import AsyncSession

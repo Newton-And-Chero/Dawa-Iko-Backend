@@ -1,6 +1,3 @@
-"""ComputeWatchlistTrendsUseCase — commodity filtering and ranking, against
-in-memory fakes."""
-
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -48,7 +45,7 @@ async def test_ranks_commodities_by_average_stockout_rate_and_excludes_non_watch
     use_case = ComputeWatchlistTrendsUseCase(analytics, commodities, stockout_threshold_pct=0.5)
     result = await use_case.execute(["Kirinyaga", "Nairobi"])
 
-    assert len(result.rows) == 4  # 2 watchlist commodities x 2 counties
+    assert len(result.rows) == 4
     assert result.ranked_commodity_ids == [carbetocin.id, insulin.id]
     assert non_watchlist.id not in result.ranked_commodity_ids
 
@@ -68,7 +65,7 @@ async def test_commodity_with_no_sweep_history_in_any_county_is_unranked() -> No
     )
     result = await use_case.execute(["Kirinyaga"])
 
-    assert len(result.rows) == 1  # one row for the one county, zero sweeps
+    assert len(result.rows) == 1
     assert result.rows[0].sweep_count == 0
     assert result.rows[0].stockout_rate == 0.0
     assert result.ranked_commodity_ids == []

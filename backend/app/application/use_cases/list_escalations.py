@@ -1,7 +1,3 @@
-"""List/filter StockoutAlerts — the read side of escalation management
-(`detect_stockout`/`acknowledge_escalation`/`resolve_escalation` are the
-write side)."""
-
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -15,8 +11,6 @@ class EscalationFilter:
     commodity_id: UUID | None = None
     status: EscalationStatus | None = None
     severity: EscalationSeverity | None = None
-    # Substring match against the alert's geography (a GeographyScope dict,
-    # e.g. a county or ward name) — same approach as SweepFilter.geography.
     geography: str | None = None
 
 

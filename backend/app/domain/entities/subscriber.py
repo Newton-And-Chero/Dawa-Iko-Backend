@@ -1,5 +1,3 @@
-"""Subscriber entity."""
-
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID, uuid4
@@ -15,8 +13,6 @@ class Subscriber:
     org: str | None = None
     phone: str | None = None
     email: str | None = None
-    # Populated when notification_channel is WEBHOOK — WebhookNotifier POSTs
-    # alerts here.
     webhook_url: str | None = None
     watchlist_commodities: list[UUID] = field(default_factory=list)
     watchlist_geography: dict[str, Any] = field(default_factory=dict)

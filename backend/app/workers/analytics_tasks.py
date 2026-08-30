@@ -1,7 +1,3 @@
-"""Celery task wrapping the scheduled facility-reliability recompute
-(workflows/08: never computed synchronously inside the webhook/call-handling
-path). Mirrors `sweep_tasks.py`'s own session-per-run pattern."""
-
 import asyncio
 
 from app.application.use_cases.compute_facility_reliability import (

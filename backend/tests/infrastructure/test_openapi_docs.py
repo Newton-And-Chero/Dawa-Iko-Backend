@@ -1,5 +1,3 @@
-"""GET /openapi.json renders without error and documents every router."""
-
 from httpx import AsyncClient
 
 _EXPECTED_PATHS = {

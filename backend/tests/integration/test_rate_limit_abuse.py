@@ -1,9 +1,3 @@
-"""Adversarial suite for the Redis-backed rate limit on `POST /sweeps/query`
-(Sprint 09) — the one endpoint that spends real money and rings real phones
-per request, so it must not be abusable. Hammers the endpoint past the
-limit, confirms the window resets, and confirms the limiter's own Redis
-keys don't accumulate unboundedly (a TTL on every key)."""
-
 import asyncio
 
 from httpx import AsyncClient
@@ -61,9 +55,7 @@ async def test_burst_past_the_limit_gets_429_then_the_window_resets(
     client: AsyncClient, db_session: AsyncSession
 ) -> None:
     await _seed_commodity_and_facility(db_session)
-    app.dependency_overrides[get_settings] = lambda: _strict_settings(
-        limit=2, window_seconds=1
-    )
+    app.dependency_overrides[get_settings] = lambda: _strict_settings(limit=2, window_seconds=1)
     body = {"commodity": "Carbetocin", "geography": {"kind": "county", "county": "Kirinyaga"}}
 
     await _clear_rate_limit_keys()
@@ -113,9 +105,6 @@ async def test_hammering_the_endpoint_never_lets_more_than_the_limit_through(
 async def test_rate_limit_keys_carry_a_ttl_and_do_not_accumulate_unbounded(
     client: AsyncClient, db_session: AsyncSession
 ) -> None:
-    """A key with no expiry would grow forever, one per distinct client IP —
-    an unbounded-memory footgun in Redis. Every key this limiter writes must
-    carry a TTL no larger than the configured window."""
     await _seed_commodity_and_facility(db_session)
     window_seconds = 30
     app.dependency_overrides[get_settings] = lambda: _strict_settings(

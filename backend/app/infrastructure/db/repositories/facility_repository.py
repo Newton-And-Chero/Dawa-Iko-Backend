@@ -1,5 +1,3 @@
-"""SQLAlchemy implementation of FacilityRepositoryPort."""
-
 from uuid import UUID
 
 from geoalchemy2.shape import from_shape, to_shape
@@ -54,8 +52,6 @@ def _to_model(facility: Facility) -> FacilityModel:
 
 
 class SqlAlchemyFacilityRepository:
-    """Implements FacilityRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

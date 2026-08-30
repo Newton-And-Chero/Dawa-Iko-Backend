@@ -1,9 +1,3 @@
-"""POST /webhooks/calle/{webhook_token} — the happy path and its
-replay-is-a-no-op behavior, through the real ASGI app. Every *rejection*
-path (wrong token, mismatched event id, unknown call, forged replay) is
-covered together as its own adversarial suite in
-tests/integration/test_webhook_forgery.py (Sprint 09)."""
-
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 

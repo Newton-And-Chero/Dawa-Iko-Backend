@@ -1,5 +1,3 @@
-"""SQLAlchemy implementation of CommodityRepositoryPort."""
-
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
@@ -34,8 +32,6 @@ def _to_model(commodity: Commodity) -> CommodityModel:
 
 
 class SqlAlchemyCommodityRepository:
-    """Implements CommodityRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

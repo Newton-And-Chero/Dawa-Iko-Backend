@@ -1,6 +1,3 @@
-"""Escalations router: GET /v1/escalations, POST /v1/escalations/{id}/acknowledge
-and /resolve."""
-
 from collections.abc import Awaitable, Callable
 
 from httpx import AsyncClient

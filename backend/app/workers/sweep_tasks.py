@@ -1,11 +1,3 @@
-"""Celery tasks wrapping the Beat-triggered sweep-orchestration use cases.
-
-Only the recurring flows run as Celery tasks. The on-demand flow
-(`RunOnDemandSweepUseCase`) is called directly by Sprint 05's HTTP routers
-per this sprint's fixed internal contract — it is not queued, since it must
-return a `sweep_id` synchronously to the caller.
-"""
-
 import asyncio
 
 from app.application.use_cases.retry_failed_calls import RetryFailedCallsUseCase

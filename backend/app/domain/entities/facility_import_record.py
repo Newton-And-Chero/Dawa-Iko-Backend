@@ -1,5 +1,3 @@
-"""FacilityImportRecord — what an import source hands back, pre-persistence."""
-
 from dataclasses import dataclass
 
 from app.domain.enums import FacilitySource, FacilityType

@@ -1,6 +1,3 @@
-"""RequestManualCallUseCase — the one documented cooldown bypass: a facility
-called moments ago is still callable manually."""
-
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -71,10 +68,9 @@ async def test_bypasses_cooldown_for_a_recently_called_facility(setup: dict) -> 
     commodity = await setup["commodities"].add(
         Commodity(name="Carbetocin", category=CommodityCategory.ESSENTIAL_MEDICINE)
     )
-    # Facility was just called a minute ago — would be cooldown-blocked in a sweep.
     await setup["calls"].add(
         Call(
-            sweep_id=facility.id,  # arbitrary unrelated sweep id for this fake
+            sweep_id=facility.id,
             facility_id=facility.id,
             status=CallStatus.COMPLETED,
             started_at=datetime.now(UTC),

@@ -1,14 +1,3 @@
-"""MockCallEAdapter — simulates CALL-E in-process. No network calls to CALL-E, ever.
-
-`place_call` generates a plausible, clearly-synthetic `CallTaskRef` and then
-fires the *same* webhook POST a real CALL-E delivery would send — via a real
-HTTP request through the injected `httpx.AsyncClient` — so the webhook route
-and `handle_calle_webhook` are exercised end-to-end, not bypassed. The fire
-is deferred a short delay so a caller has time to persist `provider_call_id`
-onto its `Call` rows (from the returned `CallTaskRef`) before the webhook
-lands, exactly as a real dispatch-then-webhook flow would.
-"""
-
 import asyncio
 import random
 import secrets
@@ -33,7 +22,6 @@ _QUANTITY_BANDS = ["low", "medium", "high"]
 
 
 def _simulate_recipient(rng: random.Random) -> tuple[str, dict[str, Any] | None, str | None]:
-    """Returns (recipient_status, structured_result, failure_code)."""
     roll = rng.random()
     if roll < 0.10:
         return "failed", None, "no_answer"
@@ -42,42 +30,26 @@ def _simulate_recipient(rng: random.Random) -> tuple[str, dict[str, Any] | None,
             "completed",
             {
                 "in_stock": "unknown",
-                "quantity_band": None,
-                "price_kes": None,
-                "last_restock_date": None,
-                "can_hold": None,
-                "hold_duration_hours": None,
+                "quantity_band": "unknown",
                 "notes": f"{_SYNTHETIC_NOTE} Respondent was unsure.",
             },
             None,
         )
     if roll < 0.55:
-        return (
-            "completed",
-            {
-                "in_stock": "yes",
-                "quantity_band": rng.choice(_QUANTITY_BANDS),
-                "price_kes": round(rng.uniform(50, 2000), 2),
-                "last_restock_date": None,
-                "can_hold": rng.random() < 0.6,
-                "hold_duration_hours": rng.choice([4, 24, 48]) if rng.random() < 0.6 else None,
-                "notes": _SYNTHETIC_NOTE,
-            },
-            None,
-        )
-    return (
-        "completed",
-        {
-            "in_stock": "no",
-            "quantity_band": None,
-            "price_kes": None,
-            "last_restock_date": "2026-07-01" if rng.random() < 0.5 else None,
-            "can_hold": None,
-            "hold_duration_hours": None,
+        result: dict[str, Any] = {
+            "in_stock": "yes",
+            "quantity_band": rng.choice(_QUANTITY_BANDS),
+            "price_kes": round(rng.uniform(50, 2000), 2),
             "notes": _SYNTHETIC_NOTE,
-        },
-        None,
-    )
+        }
+        if rng.random() < 0.6:
+            result["can_hold"] = True
+            result["hold_duration_hours"] = rng.choice([4, 24, 48])
+        return "completed", result, None
+    result = {"in_stock": "no", "quantity_band": "unknown", "notes": _SYNTHETIC_NOTE}
+    if rng.random() < 0.5:
+        result["last_restock_date"] = "2026-07-01"
+    return "completed", result, None
 
 
 def _attempt_to_dict(attempt: CallAttemptRef) -> dict[str, Any]:
@@ -102,6 +74,8 @@ def _recipient_to_dict(recipient: CallRecipientResultRef) -> dict[str, Any]:
     return {
         "id": recipient.id,
         "phones": recipient.phones,
+        "locale": recipient.locale,
+        "region": recipient.region,
         "status": recipient.status,
         "structured_result": recipient.structured_result,
         "summary": recipient.summary,
@@ -110,7 +84,6 @@ def _recipient_to_dict(recipient: CallRecipientResultRef) -> dict[str, Any]:
 
 
 def call_task_to_dict(call_task: CallTaskRef) -> dict[str, Any]:
-    """Serialize a CallTaskRef back to CALL-E's wire shape (webhook `data`)."""
     return {
         "id": call_task.id,
         "object": "call_task",
@@ -128,7 +101,7 @@ def call_task_to_dict(call_task: CallTaskRef) -> dict[str, Any]:
             if call_task.completion_confidence
             else None
         ),
-        "evidence": [],
+        "evidence": list(call_task.evidence),
         "metadata": call_task.metadata,
         "failure_code": call_task.failure_code,
         "failure_message": call_task.failure_message,
@@ -138,8 +111,6 @@ def call_task_to_dict(call_task: CallTaskRef) -> dict[str, Any]:
 
 
 class MockCallEAdapter:
-    """Implements CallProviderPort by simulating CALL-E. Zero real network calls to CALL-E."""
-
     def __init__(
         self,
         *,
@@ -164,7 +135,7 @@ class MockCallEAdapter:
         idempotency_key: str,
         metadata: dict[str, Any] | None = None,
     ) -> CallTaskRef:
-        del result_schema, idempotency_key  # unused by the simulation
+        del result_schema, idempotency_key
         now = datetime.now(UTC)
         call_id = f"call_{secrets.token_hex(12)}"
 
@@ -178,6 +149,8 @@ class MockCallEAdapter:
                 CallRecipientResultRef(
                     id=f"recip_{secrets.token_hex(8)}",
                     phones=list(recipient.phones),
+                    locale=recipient.locale,
+                    region=recipient.region,
                     status=status,
                     structured_result=(
                         structured_result if recipient_result_schema is not None else None
@@ -256,7 +229,6 @@ class MockCallEAdapter:
         ]
 
     async def wait_for_webhook(self, call_id: str) -> None:
-        """Test helper: await the deferred webhook fire for `call_id`."""
         webhook_task = self._pending_webhooks.get(call_id)
         if webhook_task is not None:
             await webhook_task

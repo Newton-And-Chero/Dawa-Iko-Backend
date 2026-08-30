@@ -1,13 +1,3 @@
-"""PostGISGeographyResolver — resolves a GeographyScope into a candidate
-facility list via PostGIS queries against `Facility.location` (GIST-indexed,
-Sprint 01): exact-match filters for county/sub_county/ward, `ST_DWithin` for
-radius, and `ST_Distance` order-by + `LIMIT` for nearest-N.
-
-Distances are computed by casting the geometry column to `geography` so
-`ST_DWithin`/`ST_Distance` operate in meters rather than raw SRID-4326
-degrees.
-"""
-
 from geoalchemy2 import Geography
 from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,8 +16,6 @@ from app.infrastructure.db.repositories.facility_repository import facility_mode
 
 
 class PostGISGeographyResolver:
-    """Implements GeographyResolverPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

@@ -1,65 +1,96 @@
-"""App-wide exception types."""
-
-
 class AppError(Exception):
-    """Base class for all application-raised errors."""
+    pass
 
 
 class NotFoundError(AppError):
-    """Raised when a requested resource does not exist."""
+    pass
 
 
 class ValidationError(AppError):
-    """Raised when input fails a domain-level validation rule."""
-
-
-class UnknownCallError(AppError):
-    """Raised when a webhook references a call_id we have no queued/in_progress record of."""
+    pass
 
 
 class InvalidCredentialsError(AppError):
-    """Raised when a login's phone_number/password pair doesn't match a user."""
+    pass
 
 
 class CallProviderError(AppError):
-    """Base class for CALL-E API errors. Carries the provider's own error code."""
-
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
 
 
 class UnsupportedRegionError(CallProviderError):
-    """CALL-E does not support outbound calling to the requested region."""
+    pass
 
 
 class UnsupportedLanguageError(CallProviderError):
-    """CALL-E does not support the requested locale/language."""
+    pass
 
 
 class InvalidPhoneError(CallProviderError):
-    """A recipient phone number was rejected by CALL-E."""
+    pass
 
 
 class NoRecipientsError(CallProviderError):
-    """A call task was submitted with no valid recipients."""
+    pass
 
 
 class ResultSchemaInvalidError(CallProviderError):
-    """`result_schema` was rejected by CALL-E as invalid JSON Schema."""
+    pass
 
 
 class RecipientResultSchemaInvalidError(CallProviderError):
-    """`recipient_result_schema` was rejected by CALL-E as invalid JSON Schema."""
+    pass
 
 
 class RateLimitExceededError(CallProviderError):
-    """CALL-E rejected the request due to rate limiting."""
+    pass
 
 
 class IdempotencyConflictError(CallProviderError):
-    """The same `Idempotency-Key` was reused with a different request body."""
+    pass
 
 
 class ProviderUnavailableError(CallProviderError):
-    """CALL-E's own upstream provider was unavailable."""
+    pass
+
+
+class InsufficientBalanceError(CallProviderError):
+    pass
+
+
+class RecipientBlockedError(CallProviderError):
+    pass
+
+
+class PolicyViolationError(CallProviderError):
+    pass
+
+
+class InvalidRecipientError(CallProviderError):
+    pass
+
+
+class InvalidRequestError(CallProviderError):
+    pass
+
+
+class UnauthorizedError(CallProviderError):
+    pass
+
+
+class ForbiddenError(CallProviderError):
+    pass
+
+
+class CallNotReadyError(CallProviderError):
+    pass
+
+
+class CallNotFoundError(CallProviderError):
+    pass
+
+
+class InternalCallProviderError(CallProviderError):
+    pass

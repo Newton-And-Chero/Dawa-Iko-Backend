@@ -1,8 +1,3 @@
-"""Shared pagination envelope. Offset/limit (not cursor) pagination —
-simple, sufficient for this project's list sizes, and easy to express
-identically on every list endpoint. The `page_params` FastAPI dependency
-that produces a `PageParams` lives in `api/v1/dependencies.py`."""
-
 from dataclasses import dataclass
 
 from pydantic import BaseModel

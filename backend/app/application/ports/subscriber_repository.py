@@ -1,5 +1,3 @@
-"""Repository port for Subscriber."""
-
 from typing import Protocol
 from uuid import UUID
 

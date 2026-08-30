@@ -1,13 +1,9 @@
-"""Unit tests for HandleCalleWebhookUseCase — all three event types, dedup, and
-the unknown-call rejection, exercised purely against in-memory fakes."""
-
 from decimal import Decimal
 
 import pytest
 
 from app.application.use_cases.handle_calle_webhook import HandleCalleWebhookUseCase
 from app.core.config import Settings
-from app.core.exceptions import UnknownCallError
 from app.domain.entities.call import Call
 from app.domain.entities.commodity import Commodity
 from app.domain.entities.facility import Facility
@@ -207,11 +203,42 @@ async def test_handle_result_validation_failed_flags_for_review(setup: dict) -> 
     assert "human review" in (result.notes or "")
 
 
-async def test_handle_unknown_call_id_raises(setup: dict) -> None:
+async def test_handle_unknown_call_id_is_acknowledged_without_changes(setup: dict) -> None:
     call_data = {"id": "call_never_dispatched", "completion_confidence": None, "recipients": []}
 
-    with pytest.raises(UnknownCallError):
-        await setup["uc"].handle(event_id="evt_4", event_type="call.completed", call_data=call_data)
+    await setup["uc"].handle(event_id="evt_4", event_type="call.completed", call_data=call_data)
+
+    assert await setup["results"].list_all() == []
+    assert await setup["events"].was_processed("evt_4") is False
+
+
+async def test_handle_event_for_already_finalized_call_is_reapplied(setup: dict) -> None:
+    call = await _seed(setup)
+    call.status = CallStatus.FAILED
+    await setup["calls"].update(call)
+
+    call_data = {
+        "id": "call_abc",
+        "completion_confidence": {"score": 0.91, "label": "high"},
+        "recipients": [
+            {
+                "id": "recip_1",
+                "status": "completed",
+                "summary": "Back in stock on a later event.",
+                "structured_result": {"in_stock": "yes", "quantity_band": "high"},
+                "attempts": [{"failure_code": None}],
+            }
+        ],
+    }
+
+    await setup["uc"].handle(event_id="evt_late", event_type="call.completed", call_data=call_data)
+
+    updated_call = await setup["calls"].get_by_id(call.id)
+    assert updated_call is not None
+    assert updated_call.status == CallStatus.COMPLETED
+    result = await setup["results"].get_by_call_id(call.id)
+    assert result is not None
+    assert result.in_stock == StockStatus.YES
 
 
 async def test_handle_duplicate_event_is_a_noop(setup: dict) -> None:
@@ -234,9 +261,6 @@ async def test_handle_duplicate_event_is_a_noop(setup: dict) -> None:
     first_result = await setup["results"].get_by_call_id(call.id)
     assert first_result is not None
 
-    # Redelivery of the *same* event id, after the call has already gone
-    # terminal — must be a silent no-op, not an UnknownCallError and not a
-    # second AvailabilityResult.
     await setup["uc"].handle(event_id="evt_5", event_type="call.completed", call_data=call_data)
 
     all_results = await setup["results"].list_all()

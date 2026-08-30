@@ -1,9 +1,3 @@
-"""RunOnDemandSweepUseCase end-to-end against a real Postgres+PostGIS instance
-and MockCallEAdapter: dispatch -> deferred webhook -> AvailabilityResult rows
--> Sweep.status flips to completed. Exercises the real webhook route (ASGI),
-not an in-process shortcut — same rationale as test_mock_calle_adapter.py.
-"""
-
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -72,9 +66,6 @@ async def test_sweep_completes_once_all_mock_webhooks_land(db_session: AsyncSess
             assert call.provider_call_id is not None
             await adapter.wait_for_webhook(call.provider_call_id)
 
-    # The webhook landed through the route's own DB session, so `db_session`'s
-    # identity map is stale for rows it mutated concurrently — expire it
-    # before reading back what the webhook committed.
     db_session.expire_all()
     sweep_repo = SqlAlchemySweepRepository(db_session)
     sweep = await sweep_repo.get_by_id(sweep_id)

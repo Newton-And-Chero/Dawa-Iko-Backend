@@ -1,5 +1,3 @@
-"""Subscriber/analyst marks a StockoutAlert resolved (PROJECT.md 2.5)."""
-
 from uuid import UUID
 
 from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort

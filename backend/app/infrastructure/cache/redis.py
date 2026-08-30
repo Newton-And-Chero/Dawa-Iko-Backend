@@ -1,5 +1,3 @@
-"""Async Redis client factory."""
-
 from functools import lru_cache
 from typing import cast
 

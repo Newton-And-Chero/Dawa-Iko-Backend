@@ -1,14 +1,3 @@
-"""Manual "call this facility now" — e.g. reconfirming a hold before a
-patient travels there. Single-facility, immediate, bypasses sweep grouping
-(resolve/prioritize/chunk never run) but still creates a minimal one-facility
-Sweep, since every Call belongs to one.
-
-This is the one documented, explicit cooldown bypass (PROJECT.md 2.2): a
-human deliberately asked for this specific call, so `is_cooldown_blocked` is
-never consulted here. It must stay a single, narrow use case — not a general
-escape hatch the sweep engine reaches for on its own.
-"""
-
 from uuid import UUID
 
 from app.application.ports.call_provider_port import CallProviderPort
@@ -81,8 +70,6 @@ class RequestManualCallUseCase:
         return sweep.id
 
     async def execute_from_call(self, call_id: UUID, requester_id: UUID | None = None) -> UUID:
-        """`POST /calls/{call_id}/retry` — re-derive the facility/commodity a
-        past `Call` was for, and place a fresh manual call for the same pair."""
         call = await self._calls.get_by_id(call_id)
         if call is None:
             raise NotFoundError(f"call {call_id} not found")

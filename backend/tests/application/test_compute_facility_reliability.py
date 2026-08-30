@@ -1,7 +1,3 @@
-"""ComputeFacilityReliabilityUseCase — score blending and the persist-back
-batch job, against in-memory fakes. `domain/services/reliability.py`'s own
-weighting matrix is covered by tests/domain/test_reliability.py."""
-
 from uuid import uuid4
 
 import pytest
@@ -77,8 +73,6 @@ async def test_recompute_and_persist_all_writes_score_back_onto_facility() -> No
 
 
 async def test_recompute_and_persist_all_skips_facility_not_in_repository() -> None:
-    """A facility id that has calls (so analytics knows about it) but no
-    longer exists in the facility repository is skipped, not an error."""
     facilities = InMemoryFacilityRepository()
     analytics = InMemoryAnalyticsRepository()
     analytics.seed_facility_stats(

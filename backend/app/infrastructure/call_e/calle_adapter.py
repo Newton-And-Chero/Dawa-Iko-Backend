@@ -1,27 +1,27 @@
-"""CallEAdapter — real CALL-E integration.
-
-Uses raw `httpx` rather than the `calle-ai` SDK: the SDK's async support and
-webhook-handling story aren't verified against this codebase's asyncio stack,
-and raw httpx gives full, auditable control over mapping CALL-E's typed error
-codes onto `core/exceptions.py` (see workflows/03). Shapes are confirmed
-against `docs.heycall-e.com`'s OpenAPI spec — re-verify there if CALL-E's API
-changes.
-"""
-
 from datetime import datetime
 from typing import Any
 
 import httpx
 
 from app.core.exceptions import (
+    CallNotFoundError,
+    CallNotReadyError,
     CallProviderError,
+    ForbiddenError,
     IdempotencyConflictError,
+    InsufficientBalanceError,
+    InternalCallProviderError,
     InvalidPhoneError,
+    InvalidRecipientError,
+    InvalidRequestError,
     NoRecipientsError,
+    PolicyViolationError,
     ProviderUnavailableError,
     RateLimitExceededError,
+    RecipientBlockedError,
     RecipientResultSchemaInvalidError,
     ResultSchemaInvalidError,
+    UnauthorizedError,
     UnsupportedLanguageError,
     UnsupportedRegionError,
 )
@@ -36,20 +36,35 @@ from app.domain.value_objects.call_task_ref import (
 )
 
 _ERROR_CODE_MAP: dict[str, type[CallProviderError]] = {
+    "invalid_request": InvalidRequestError,
+    "unauthorized": UnauthorizedError,
+    "forbidden": ForbiddenError,
     "unsupported_region": UnsupportedRegionError,
     "unsupported_language": UnsupportedLanguageError,
     "invalid_phone": InvalidPhoneError,
+    "invalid_recipient": InvalidRecipientError,
     "no_recipients": NoRecipientsError,
+    "recipient_blocked": RecipientBlockedError,
+    "policy_violation": PolicyViolationError,
+    "call_not_ready": CallNotReadyError,
     "result_schema_invalid": ResultSchemaInvalidError,
     "recipient_result_schema_invalid": RecipientResultSchemaInvalidError,
     "rate_limit_exceeded": RateLimitExceededError,
+    "insufficient_balance": InsufficientBalanceError,
     "idempotency_conflict": IdempotencyConflictError,
     "provider_unavailable": ProviderUnavailableError,
+    "internal_error": InternalCallProviderError,
+    "not_found": CallNotFoundError,
 }
 
 
 def _parse_datetime(value: str | None) -> datetime | None:
-    return datetime.fromisoformat(value) if value else None
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def _parse_confidence(data: dict[str, Any] | None) -> CompletionConfidenceRef | None:
@@ -87,6 +102,8 @@ def _parse_recipient(data: dict[str, Any]) -> CallRecipientResultRef:
         status=data["status"],
         structured_result=data.get("structured_result"),
         summary=data.get("summary"),
+        locale=data.get("locale"),
+        region=data.get("region"),
         attempts=[_parse_attempt(a) for a in data.get("attempts", [])],
     )
 
@@ -101,6 +118,7 @@ def _parse_call_task(data: dict[str, Any]) -> CallTaskRef:
         summary=data.get("summary"),
         task_completed=data.get("task_completed"),
         completion_confidence=_parse_confidence(data.get("completion_confidence")),
+        evidence=[str(item) for item in data.get("evidence") or []],
         failure_code=data.get("failure_code"),
         failure_message=data.get("failure_message"),
         metadata=data.get("metadata") or {},
@@ -123,8 +141,6 @@ def _raise_for_error(response: httpx.Response) -> None:
 
 
 class CallEAdapter:
-    """Implements CallProviderPort against the real CALL-E API."""
-
     def __init__(
         self, *, base_url: str, api_key: str, http_client: httpx.AsyncClient | None = None
     ) -> None:

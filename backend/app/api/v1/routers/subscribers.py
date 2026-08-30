@@ -1,7 +1,3 @@
-"""Subscribers router: `GET/POST/PATCH /subscribers` — admin-managed
-(PROJECT.md's data model keeps Subscriber distinct from User: a subscriber
-receives alerts, a user logs in; a `Subscriber` has no login of its own)."""
-
 import dataclasses
 from uuid import UUID
 

@@ -1,8 +1,3 @@
-"""Authentication/authorization primitives (Sprint 05): JWT issuance and
-verification, and argon2 password hashing. `User` authenticates by
-`phone_number` (no email field on the entity — see workflows/05).
-"""
-
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID

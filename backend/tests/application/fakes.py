@@ -1,6 +1,3 @@
-"""In-memory fakes for the repository/provider ports, used by application-layer
-unit tests."""
-
 import secrets
 from datetime import UTC, datetime
 from typing import Any
@@ -192,10 +189,6 @@ class InMemoryAvailabilityResultRepository:
 
 
 class InMemoryRealtimeEventBus:
-    """Records published events instead of touching Redis — application-layer
-    tests assert on `.published`, not on pub/sub delivery (that's covered by
-    the infrastructure-layer realtime tests)."""
-
     def __init__(self) -> None:
         self.published: list[tuple[str, dict[str, Any]]] = []
 
@@ -204,12 +197,15 @@ class InMemoryRealtimeEventBus:
 
     async def subscribe(self, channel: str) -> Any:
         return
-        yield  # pragma: no cover - never actually iterated in these tests
+        yield
 
 
 class InMemoryWebhookEventRepository:
     def __init__(self) -> None:
         self._seen: set[str] = set()
+
+    async def was_processed(self, event_id: str) -> bool:
+        return event_id in self._seen
 
     async def mark_processed(self, event_id: str) -> bool:
         if event_id in self._seen:
@@ -219,12 +215,6 @@ class InMemoryWebhookEventRepository:
 
 
 class FakeGeographyResolver:
-    """Always resolves to the fixed facility list it was built with, ignoring
-    the requested scope — application-layer dispatch tests care about what
-    `dispatch_sweep` does with a candidate list, not how one gets resolved
-    (that's `PostGISGeographyResolver`'s job, covered in infrastructure tests).
-    """
-
     def __init__(self, facilities: list[Facility]) -> None:
         self._facilities = facilities
 
@@ -233,13 +223,6 @@ class FakeGeographyResolver:
 
 
 class FakeCallProvider:
-    """Records `place_call` invocations and returns a synthetic, immediately
-    "completed" CallTaskRef — no real network, no deferred webhook. Used by
-    application-layer sweep-dispatch tests that assert on Call/Sweep state
-    directly rather than exercising the webhook pipeline end-to-end (that's
-    what `MockCallEAdapter` is for, in infrastructure tests).
-    """
-
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
 
@@ -349,12 +332,6 @@ class InMemorySubscriberRepository:
 
 
 class InMemoryAnalyticsRepository:
-    """Application-layer fake for `AnalyticsRepositoryPort`. Geography
-    matching here is an exact-string tag on each seeded summary rather than
-    the real repository's substring-over-JSONB match — good enough to test
-    use-case orchestration; the real matching behavior is covered by the
-    infrastructure-layer `SqlAlchemyAnalyticsRepository` tests."""
-
     def __init__(self) -> None:
         self._summaries: dict[UUID, list[tuple[str | None, SweepStockSummary]]] = {}
         self._facility_stats: dict[UUID, FacilityCallStats] = {}
@@ -405,9 +382,6 @@ class InMemoryAnalyticsRepository:
 
 
 class FakeNotifier:
-    """Records `send()` invocations instead of delivering anything — used by
-    application-layer `dispatch_escalation` tests."""
-
     def __init__(self, *, fail: bool = False) -> None:
         self.fail = fail
         self.sent: list[dict[str, Any]] = []

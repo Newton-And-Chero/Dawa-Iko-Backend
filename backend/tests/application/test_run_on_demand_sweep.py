@@ -1,9 +1,3 @@
-"""RunOnDemandSweepUseCase dispatch orchestration — resolution is stubbed out
-(FakeGeographyResolver) since that's PostGISGeographyResolver's job (covered
-in tests/infrastructure/test_geography_resolver.py); these tests assert on
-chunking, cooldown exclusion, and the Sweep/Call rows the use case creates.
-"""
-
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -116,7 +110,7 @@ async def test_chunking_produces_multiple_place_call_invocations_with_distinct_k
     )
 
     provider_calls = setup["call_provider"].calls
-    assert len(provider_calls) == 3  # chunks of 2, 2, 1
+    assert len(provider_calls) == 3
     idempotency_keys = [c["idempotency_key"] for c in provider_calls]
     assert len(set(idempotency_keys)) == 3
     assert all(key.startswith(f"{sweep_id}:") for key in idempotency_keys)
@@ -170,7 +164,7 @@ async def test_demo_redirect_numbers_cap_the_chunk_and_reroute_every_call(setup:
     )
 
     calls = await setup["calls"].list_by_sweep_id(sweep_id)
-    assert len(calls) == 2  # capped to the number of demo numbers
+    assert len(calls) == 2
     assert all(c.provider_recipient_id is not None for c in calls)
 
     provider_calls = setup["call_provider"].calls

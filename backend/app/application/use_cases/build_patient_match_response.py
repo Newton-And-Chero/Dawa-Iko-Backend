@@ -1,8 +1,3 @@
-"""A completed (or in-progress) sweep's in-stock AvailabilityResults -> a
-ranked, patient-facing shape (PROJECT.md 2.5/2.7): facility name, distance,
-price, hold reference. The explicit, reusable version of the ranking Sprint
-05's `GET /sweeps/{id}` response and Sprint 06's WS stream need."""
-
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -34,8 +29,6 @@ class PatientMatch:
 
 
 def _origin_point(geography_scope: dict[str, Any]) -> tuple[float, float] | None:
-    """A reference point to measure distance from — only radius/nearest-N
-    queries carry one; county/sub_county/ward scopes have no single point."""
     scope = geography_scope_from_dict(geography_scope)
     if isinstance(scope, RadiusScope | NearestNScope):
         return (scope.lat, scope.lng)

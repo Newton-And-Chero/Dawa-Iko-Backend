@@ -1,5 +1,3 @@
-"""Repository port for Commodity."""
-
 from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 

@@ -25,9 +25,6 @@ def _facility(name: str, facility_type: FacilityType, lat: float, lng: float) ->
     )
 
 
-# --- prioritize ---------------------------------------------------------
-
-
 def test_prioritize_orders_public_before_private_with_no_point_reference() -> None:
     private = _facility("Private Chemist", FacilityType.PRIVATE_CHEMIST, -0.68, 37.36)
     public = _facility("Public Dispensary", FacilityType.DISPENSARY, -0.69, 37.37)
@@ -76,9 +73,6 @@ def test_prioritize_distance_takes_precedence_over_type_intent() -> None:
     assert [f.name for f in ordered] == ["Near Private", "Far Public"]
 
 
-# --- chunk ---------------------------------------------------------------
-
-
 def test_chunk_exact_multiple() -> None:
     facilities = [_facility(str(i), FacilityType.PUBLIC, 0, 0) for i in range(4)]
     chunks = chunk(facilities, 2)
@@ -107,9 +101,6 @@ def test_chunk_preserves_order() -> None:
     assert [f.name for c in chunks for f in c] == ["0", "1", "2"]
 
 
-# --- is_cooldown_blocked --------------------------------------------------
-
-
 def test_cooldown_blocks_recent_call() -> None:
     now = datetime(2026, 8, 22, tzinfo=UTC)
     last_call = now - timedelta(hours=1)
@@ -125,9 +116,6 @@ def test_cooldown_allows_call_outside_window() -> None:
 def test_cooldown_allows_facility_never_called() -> None:
     now = datetime(2026, 8, 22, tzinfo=UTC)
     assert is_cooldown_blocked(None, now, cooldown_hours=24) is False
-
-
-# --- is_eligible_for_retry -------------------------------------------------
 
 
 def test_retry_ineligible_for_completed_call() -> None:
@@ -150,7 +138,7 @@ def test_retry_ineligible_before_delay_elapses() -> None:
 
 def test_retry_ineligible_same_hour_of_day_as_failed_attempt() -> None:
     now = datetime(2026, 8, 23, 12, tzinfo=UTC)
-    ended_at = datetime(2026, 8, 22, 12, tzinfo=UTC)  # same hour-of-day, a day earlier
+    ended_at = datetime(2026, 8, 22, 12, tzinfo=UTC)
     assert is_eligible_for_retry(CallStatus.NO_ANSWER, 1, ended_at, now, 4, 3) is False
 
 

@@ -1,8 +1,3 @@
-"""AvailabilityResult response schema — field names mirror the
-`AvailabilityResult` domain entity exactly (Sprint 01). This is the public,
-aggregate "where can I get X" read surface (PROJECT.md 2.7) — no facility
-phone number or transcript is exposed here."""
-
 from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID

@@ -1,5 +1,3 @@
-"""Celery app instance, Redis broker/backend."""
-
 from celery import Celery
 
 from app.core.config import get_settings

@@ -1,5 +1,3 @@
-"""Subscribers router: GET/POST/PATCH /v1/subscribers."""
-
 from collections.abc import Awaitable, Callable
 
 from httpx import AsyncClient

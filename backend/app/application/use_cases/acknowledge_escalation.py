@@ -1,6 +1,3 @@
-"""Subscriber/analyst marks a StockoutAlert acknowledged (e.g. "redistributing
-stock"), with an optional free-text note (PROJECT.md 2.5)."""
-
 from uuid import UUID
 
 from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort

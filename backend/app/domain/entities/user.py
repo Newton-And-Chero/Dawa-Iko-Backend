@@ -1,5 +1,3 @@
-"""User entity."""
-
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 

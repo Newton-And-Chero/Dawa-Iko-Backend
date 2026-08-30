@@ -1,6 +1,3 @@
-"""Commodity request/response schemas — field names mirror the `Commodity`
-domain entity exactly (Sprint 01)."""
-
 from uuid import UUID
 
 from pydantic import BaseModel, Field

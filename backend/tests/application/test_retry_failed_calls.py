@@ -1,8 +1,3 @@
-"""RetryFailedCallsUseCase — pure application-layer test against in-memory
-fakes: a no_answer call within the attempt cap gets retried; one that has
-already hit MAX_CALL_ATTEMPTS stays failed.
-"""
-
 from datetime import UTC, datetime, timedelta
 
 import pytest

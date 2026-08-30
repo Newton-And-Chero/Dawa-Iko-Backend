@@ -1,6 +1,3 @@
-"""BuildPatientMatchResponseUseCase — ranking (in-stock first, i.e. filtered
-to only in-stock, then by the documented distance/confidence tiebreaker)."""
-
 from decimal import Decimal
 from uuid import uuid4
 
@@ -131,8 +128,6 @@ async def test_matches_ranked_by_distance_then_confidence(setup: dict) -> None:
 
     matches = await _use_case(setup).execute(sweep.id)
 
-    # Distance wins over confidence: the near facility (lower confidence)
-    # still ranks first.
     assert [m.facility_id for m in matches] == [near.id, far.id]
 
 

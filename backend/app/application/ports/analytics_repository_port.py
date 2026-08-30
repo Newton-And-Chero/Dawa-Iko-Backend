@@ -1,8 +1,3 @@
-"""Repository port for read-only analytics aggregate queries (Sprint 08).
-The one port whose implementation is expected to run hand-written aggregate
-SQL across multiple tables (workflows/08) — every other repository port in
-`application/ports/` stays single-entity CRUD."""
-
 from datetime import datetime
 from typing import Protocol
 from uuid import UUID

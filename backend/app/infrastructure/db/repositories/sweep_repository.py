@@ -1,5 +1,3 @@
-"""SQLAlchemy implementation of SweepRepositoryPort."""
-
 from uuid import UUID
 
 from sqlalchemy import Text, cast, select
@@ -37,8 +35,6 @@ def _to_model(sweep: Sweep) -> SweepModel:
 
 
 class SqlAlchemySweepRepository:
-    """Implements SweepRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

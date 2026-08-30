@@ -1,12 +1,3 @@
-"""POST /webhooks/calle/{webhook_token} — inbound CALL-E webhook receiver.
-
-Not part of the public API surface: deliberately mounted outside the `/v1`
-prefix and never exposed in any future public OpenAPI spec. Every check here
-is defensive input validation, not business logic — see RULES.md's CALL-E
-section: CALL-E signs nothing, so this endpoint must never trust the request
-on its own say-so.
-"""
-
 import json
 from functools import partial
 from typing import Any
@@ -18,7 +9,6 @@ from app.api.v1.dependencies import get_realtime_event_bus
 from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
 from app.application.use_cases.handle_calle_webhook import HandleCalleWebhookUseCase
 from app.core.config import Settings, get_settings
-from app.core.exceptions import UnknownCallError
 from app.core.webhook_security import is_valid_webhook_token
 from app.infrastructure.db.repositories.availability_result_repository import (
     SqlAlchemyAvailabilityResultRepository,
@@ -39,17 +29,22 @@ from app.infrastructure.notifications.factory import build_notifier
 
 router = APIRouter(tags=["webhooks"])
 
+_WEBHOOK_EVENT_TYPES = {
+    "call.completed",
+    "call.failed",
+    "call.result_validation_failed",
+}
+
 
 @router.post("/webhooks/calle/{webhook_token}")
 async def receive_calle_webhook(
     webhook_token: str,
     request: Request,
-    session: AsyncSession = Depends(get_session),  # noqa: B008 (standard FastAPI DI pattern)
+    session: AsyncSession = Depends(get_session),
     realtime_event_bus: RealtimeEventBusPort = Depends(get_realtime_event_bus),
     settings: Settings = Depends(get_settings),
 ) -> dict[str, bool]:
     if not is_valid_webhook_token(webhook_token):
-        # 404, not 403/401 — don't confirm the endpoint exists to a guesser.
         raise HTTPException(status_code=404)
 
     try:
@@ -57,9 +52,20 @@ async def receive_calle_webhook(
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="invalid JSON body") from exc
 
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="webhook body must be a JSON object")
+
     event_id_header = request.headers.get("CALL-E-Event-Id")
     if not event_id_header or event_id_header != body.get("id"):
         raise HTTPException(status_code=400, detail="CALL-E-Event-Id header missing or mismatched")
+
+    event_type = body.get("type")
+    if event_type not in _WEBHOOK_EVENT_TYPES:
+        raise HTTPException(status_code=400, detail="unknown webhook event type")
+
+    call_data = body.get("data")
+    if not isinstance(call_data, dict) or not isinstance(call_data.get("id"), str):
+        raise HTTPException(status_code=400, detail="webhook data.id missing")
 
     use_case = HandleCalleWebhookUseCase(
         call_repository=SqlAlchemyCallRepository(session),
@@ -74,13 +80,10 @@ async def receive_calle_webhook(
         realtime_event_bus=realtime_event_bus,
         settings=settings,
     )
-    try:
-        await use_case.handle(
-            event_id=body["id"],
-            event_type=body.get("type", ""),
-            call_data=body.get("data") or {},
-        )
-    except UnknownCallError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await use_case.handle(
+        event_id=body["id"],
+        event_type=event_type,
+        call_data=call_data,
+    )
 
     return {"ok": True}

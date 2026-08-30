@@ -1,15 +1,3 @@
-"""Zero/below-threshold availability detection, hooked into the sweep
-completion branch of `HandleCalleWebhookUseCase._maybe_complete_sweep`
-(Sprint 04's real "sweep just completed" moment) — never a second,
-independent trigger point (RULES.md).
-
-`_sweep_dispatch.dispatch_sweep`'s other completion branch (a sweep whose
-candidate list resolved to zero facilities) deliberately never calls this:
-it completes with zero calls, and `classify_severity` treats
-`facilities_checked_count == 0` as "nothing to detect" by contract — there is
-nothing this use case could ever find on that path.
-"""
-
 from uuid import UUID
 
 from app.application.ports.availability_result_repository import AvailabilityResultRepositoryPort
@@ -53,7 +41,7 @@ class DetectStockoutUseCase:
         calls = await self._calls.list_by_sweep_id(sweep_id)
         facilities_checked_count = len(calls)
         if facilities_checked_count == 0:
-            return None  # nothing was actually checked — not a stockout
+            return None
 
         facilities_with_stock_count = 0
         for call in calls:
@@ -63,7 +51,7 @@ class DetectStockoutUseCase:
 
         pct_in_stock = facilities_with_stock_count / facilities_checked_count
         if pct_in_stock > self._settings.STOCKOUT_THRESHOLD_PCT:
-            return None  # plenty of stock — not scarce enough to classify
+            return None
 
         commodity = await self._commodities.get_by_id(sweep.commodity_id)
         if commodity is None:

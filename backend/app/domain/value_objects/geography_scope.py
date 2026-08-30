@@ -1,10 +1,3 @@
-"""GeographyScope — a tagged union of the geography-resolution variants from
-PROJECT.md 2.2: county / sub_county / ward exact match, radius-from-point, and
-nearest-N-facilities. Framework-free — `GeographyResolverPort` implementations
-turn a scope into a facility list; `geography_scope_to_dict`/`_from_dict`
-(de)serialize it for `Sweep.geography_scope`'s JSONB column.
-"""
-
 from dataclasses import dataclass
 from typing import Any
 

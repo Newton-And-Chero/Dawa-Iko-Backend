@@ -1,8 +1,3 @@
-"""SQLAlchemy implementation of `AnalyticsRepositoryPort` — Sprint 08's one
-place aggregate SQL against multiple tables lives (RULES.md: "one place to
-review query correctness and add indexes against"). Read-only: never writes
-to `Sweep`/`Call`/`AvailabilityResult` (workflows/08's rule)."""
-
 from datetime import datetime
 from uuid import UUID
 
@@ -15,8 +10,6 @@ from app.infrastructure.db.models import AvailabilityResultModel, CallModel, Swe
 
 
 class SqlAlchemyAnalyticsRepository:
-    """Implements AnalyticsRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
@@ -28,10 +21,6 @@ class SqlAlchemyAnalyticsRepository:
         date_from: datetime | None = None,
         date_to: datetime | None = None,
     ) -> list[SweepStockSummary]:
-        # Grouping by SweepModel.id (its primary key) lets Postgres select
-        # SweepModel.created_at un-aggregated (functional dependency), so
-        # each sweep contributes exactly one row alongside its call/result
-        # counts rather than needing a second query per sweep.
         stmt = (
             select(
                 SweepModel.id,

@@ -1,8 +1,3 @@
-"""Call response schema — field names mirror the `Call` domain entity
-exactly (Sprint 01). Includes transcript/recording URLs, so every route
-returning this requires at least `viewer` (RULES.md's data-minimization
-default for anything containing a transcript)."""
-
 from datetime import datetime
 from uuid import UUID
 

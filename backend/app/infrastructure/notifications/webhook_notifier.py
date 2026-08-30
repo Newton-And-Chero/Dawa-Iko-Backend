@@ -1,8 +1,3 @@
-"""WebhookNotifier — POSTs a JSON alert payload to a subscriber's own
-registered `webhook_url`. A small number of retries with backoff, then gives
-up and logs: a dead subscriber webhook must never raise past `send()` and
-must never block delivery to any other subscriber (RULES.md)."""
-
 import asyncio
 import logging
 from typing import Any
@@ -19,13 +14,6 @@ _BASE_BACKOFF_SECONDS = 0.5
 
 
 class WebhookNotifier:
-    """Implements NotifierPort.
-
-    `http_client` is injectable so tests can point delivery at a local test
-    app (e.g. an `httpx.ASGITransport`-backed client) rather than the open
-    internet — same pattern as `MockCallEAdapter`.
-    """
-
     def __init__(
         self, *, http_client: httpx.AsyncClient | None = None, timeout: float = 5.0
     ) -> None:

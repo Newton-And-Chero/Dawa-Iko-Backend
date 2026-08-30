@@ -1,6 +1,3 @@
-"""Auth + user-management schemas. Login is phone_number/password — the
-`User` domain entity has no email field (see workflows/05)."""
-
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -24,7 +21,6 @@ class UserOut(BaseModel):
     role: UserRole
     org: str | None
     phone_number: str | None
-    # Deliberately no password_hash field — never serialized to a client.
 
 
 class UserCreateIn(BaseModel):

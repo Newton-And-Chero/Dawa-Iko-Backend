@@ -1,10 +1,3 @@
-"""Facility reliability scoring (PROJECT.md 2.8) — `compute_for_facility`/
-`compute_for_all` are plain reads used by the `GET /analytics/facility-
-reliability` route; `recompute_and_persist_all` is the scheduled batch write
-(a Celery Beat task per workflows/08's rule) that caches the result onto
-`Facility.reliability_score`. Never called from the webhook/call-handling
-hot path."""
-
 from dataclasses import dataclass
 from uuid import UUID
 

@@ -1,15 +1,3 @@
-"""Sprint 06 real-time layer: WS/SSE integration tests against the real ASGI
-app, real Redis, and the test Postgres DB.
-
-Uses `httpx-ws`'s `aconnect_ws` rather than Starlette's synchronous
-`TestClient` for the WS routes: it drives the WebSocket handshake and framing
-directly over httpx's async transport, on the *same* asyncio event loop as
-the rest of this async test suite (including `db_session`'s pooled asyncpg
-connections) — `TestClient` instead runs the ASGI app on a separate
-thread/loop via a blocking portal, which would bind pooled asyncpg
-connections to two different event loops and break them.
-"""
-
 import asyncio
 import contextlib
 import json
@@ -48,20 +36,6 @@ from app.main import app
 
 @pytest_asyncio.fixture
 async def ws_client() -> AsyncGenerator[AsyncClient, None]:
-    """A client whose transport speaks the ASGI `websocket` scope, unlike the
-    plain `client` fixture's `httpx.ASGITransport` (HTTP-only). Only needed
-    for `aconnect_ws(...)` calls below — plain HTTP requests still go through
-    the regular `client` fixture.
-
-    Closed manually rather than via `async with`: `ASGIWebSocketTransport`
-    spawns a background anyio task group per WS connection, and — even after
-    every `aconnect_ws(...)` context in a test has already exited cleanly —
-    pytest-asyncio's fixture teardown can run the transport's own
-    `__aexit__` in a different task than `__aenter__`, which anyio's cancel
-    scopes reject by design. That's a test-harness plumbing artifact, not a
-    real leak (every connection is already closed by this point), so it's
-    swallowed here rather than left to fail the test run.
-    """
     ac = AsyncClient(transport=ASGIWebSocketTransport(app=app), base_url="http://test")
     await ac.__aenter__()
     try:
@@ -180,9 +154,6 @@ async def test_sweep_ws_sends_snapshot_then_live_events_matching_rest_state(
         assert completed_event["type"] == "sweep.completed"
         assert completed_event["data"]["status"] == "completed"
 
-    # Matches the REST view of the same state at the same point in time —
-    # no drift between the polled and pushed views (workflows/06 testing
-    # requirements).
     rest_response = await client.get(f"/v1/sweeps/{call.sweep_id}")
     assert rest_response.json()["status"] == "completed"
 
@@ -198,18 +169,15 @@ async def test_sweep_ws_disconnect_leaves_no_leaked_subscription(
     baseline = manager.subscriber_count(channel)
 
     async with aconnect_ws(f"/ws/sweeps/{call.sweep_id}", ws_client) as ws:
-        await ws.receive_json()  # snapshot
+        await ws.receive_json()
         assert manager.subscriber_count(channel) == baseline + 1
 
-    # Give the server-side handler's disconnect cleanup a beat to run.
     for _ in range(20):
         if manager.subscriber_count(channel) == baseline:
             break
         await asyncio.sleep(0.05)
     assert manager.subscriber_count(channel) == baseline
 
-    # The channel's Call is still gettable over REST — a leaked/broken
-    # subscription didn't take the server down.
     rest_response = await client.get(f"/v1/sweeps/{call.sweep_id}")
     assert rest_response.status_code == 200
 
@@ -239,10 +207,6 @@ async def test_n_concurrent_ws_connections_each_receive_the_event_exactly_once(
 
         await _trigger_webhook(client, "evt_ws_fanout", call)
 
-        # The seeded sweep has exactly one Call, so this single webhook
-        # produces exactly three events (call.status_changed,
-        # availability_result.created, sweep.completed) — assert every
-        # connection receives each of those exactly once, and nothing more.
         for ws in (ws_a, ws_b, ws_c):
             received_types = [(await ws.receive_json())["type"] for _ in range(3)]
             assert received_types == [
@@ -296,20 +260,6 @@ async def test_geography_ws_snapshot_then_live_event(
 
 
 class _SSEStream:
-    """Drives the ASGI `http` scope directly, one `send()` message at a time.
-
-    `httpx.ASGITransport` (and `ASGIWebSocketTransport`, which falls back to
-    it for a plain HTTP request) awaits the *entire* ASGI application call
-    to finish before returning any `Response` at all — see its
-    `handle_async_request`, which only builds a `Response` after
-    `response_complete` is set. That makes it unusable for testing
-    `GET /sweeps/{id}/stream`: the endpoint's generator never finishes on
-    its own (it only stops when the client disconnects), so `client.stream()`
-    would hang forever waiting for a response that isn't coming. This reads
-    each `http.response.body` message off the wire as the app sends it,
-    exactly like a real streaming HTTP client would.
-    """
-
     def __init__(self, path: str) -> None:
         self._path = path
         self._queue: asyncio.Queue[dict] = asyncio.Queue()
@@ -335,18 +285,12 @@ class _SSEStream:
         request_complete = False
 
         async def receive() -> dict:
-            # Starlette's `StreamingResponse` runs a concurrent
-            # "listen for disconnect" loop that calls `receive()` in a tight
-            # loop and cancels the streaming body as soon as it sees
-            # `http.disconnect` — so unlike a plain request/response
-            # transport, this must never return that on its own. The only
-            # "disconnect" here is `__aexit__` cancelling `self._task`.
             nonlocal request_complete
             if not request_complete:
                 request_complete = True
                 return {"type": "http.request", "body": b"", "more_body": False}
             await asyncio.Future()
-            raise AssertionError("unreachable")  # pragma: no cover
+            raise AssertionError("unreachable")
 
         async def send(message: dict) -> None:
             await self._queue.put(message)

@@ -1,7 +1,3 @@
-"""Calls read endpoints, plus the manual "call this facility now" retry
-action. Responses include transcript/recording URLs, so every route
-requires at least `viewer` (RULES.md's data-minimization default)."""
-
 import dataclasses
 from uuid import UUID
 

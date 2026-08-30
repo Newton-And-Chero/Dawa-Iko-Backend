@@ -1,10 +1,3 @@
-"""Framework-free mirrors of CALL-E's call-task shapes.
-
-These keep CALL-E's wire format (and the `calle-ai`/httpx types that parse it)
-out of `application/` — everything above `infrastructure/call_e/` works with
-these dataclasses only.
-"""
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -12,8 +5,6 @@ from typing import Any
 
 @dataclass(frozen=True)
 class CallRecipient:
-    """One outbound recipient we ask CALL-E to dial."""
-
     phones: list[str]
     region: str
     locale: str
@@ -53,6 +44,8 @@ class CallRecipientResultRef:
     status: str
     structured_result: dict[str, Any] | None
     summary: str | None
+    locale: str | None = None
+    region: str | None = None
     attempts: list[CallAttemptRef] = field(default_factory=list)
 
 
@@ -71,6 +64,7 @@ class CallTaskRef:
     metadata: dict[str, Any]
     created_at: datetime
     completed_at: datetime | None
+    evidence: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

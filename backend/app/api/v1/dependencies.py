@@ -1,11 +1,3 @@
-"""Shared FastAPI dependencies: auth (JWT -> current user, role gating) and
-pagination params.
-
-`public` (PROJECT.md 2.6/RULES.md's role model) means "no token required" —
-routes for the public read surface simply omit `get_current_user`/
-`require_role` rather than depending on a fake "public user" token.
-"""
-
 from collections.abc import Callable, Coroutine
 from typing import Any
 
@@ -29,9 +21,6 @@ from app.infrastructure.realtime.event_bus import RealtimeEventBus
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
-# Any logged-in role — the minimum bar for a route serving a phone number or
-# transcript (RULES.md's data-minimization default), or otherwise not part
-# of the `public` read surface.
 AUTHENTICATED_ROLES = (UserRole.ADMIN, UserRole.ANALYST, UserRole.VIEWER)
 
 
@@ -63,10 +52,6 @@ def require_role(*roles: UserRole) -> Callable[..., Coroutine[Any, Any, User]]:
 
 
 def get_call_provider(settings: Settings = Depends(get_settings)) -> CallProviderPort:
-    """A `Depends`-wired seam around `build_call_provider` — tests override
-    this (via `app.dependency_overrides`) with an adapter bound to the app's
-    own ASGI transport, so a router's dispatch never makes a real socket
-    call during an automated test run (RULES.md)."""
     return build_call_provider(settings)
 
 

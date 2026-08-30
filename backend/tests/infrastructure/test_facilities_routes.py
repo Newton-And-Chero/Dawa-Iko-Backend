@@ -1,10 +1,3 @@
-"""Facilities router: GET/POST /v1/facilities, GET/PATCH /v1/facilities/{id},
-POST /v1/facilities/{id}/verify-phone.
-
-Every route requires at least `viewer` (Facility carries phone_number) —
-write routes require admin/analyst.
-"""
-
 from collections.abc import Awaitable, Callable
 
 from httpx import AsyncClient

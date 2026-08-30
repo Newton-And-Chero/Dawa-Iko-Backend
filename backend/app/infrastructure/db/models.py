@@ -1,5 +1,3 @@
-"""SQLAlchemy declarative models — one class per domain entity."""
-
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -45,7 +43,6 @@ class Base(DeclarativeBase):
 
 
 def _pg_enum(enum_cls: type, name: str) -> Enum:
-    """A native Postgres enum type storing member *values* (e.g. "no_answer"), not names."""
     return Enum(enum_cls, name=name, values_callable=lambda obj: [e.value for e in obj])
 
 
@@ -137,9 +134,6 @@ class CallModel(Base):
     __table_args__ = (
         Index("ix_calls_facility_id_started_at", "facility_id", "started_at"),
         Index("ix_calls_provider_call_id", "provider_call_id"),
-        # Sprint 08's analytics_repository joins Sweep -> Call on this column
-        # for every stockout-rate query; list_by_sweep_id (Sprint 04) hit the
-        # same gap without an index.
         Index("ix_calls_sweep_id", "sweep_id"),
     )
 
@@ -168,9 +162,6 @@ class AvailabilityResultModel(Base):
 
     __table_args__ = (
         Index("ix_availability_results_commodity_id_created_at", "commodity_id", "created_at"),
-        # Sprint 08's analytics_repository: joins Call -> AvailabilityResult on
-        # call_id (stockout-rate summaries) and filters by facility_id
-        # (facility_result_confidences).
         Index("ix_availability_results_call_id", "call_id"),
         Index("ix_availability_results_facility_id", "facility_id"),
     )
@@ -213,8 +204,6 @@ class SubscriberModel(Base):
 
 
 class WebhookEventModel(Base):
-    """Idempotency ledger for inbound CALL-E webhook events (see workflows/03)."""
-
     __tablename__ = "webhook_events"
 
     id: Mapped[str] = mapped_column(String(100), primary_key=True)

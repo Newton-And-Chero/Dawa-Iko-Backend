@@ -1,8 +1,3 @@
-"""StockoutAlert -> matched subscribers -> one NotifierPort.send() per
-subscriber, via their preferred channel. Dispatch is per-subscriber and
-failures are isolated: one subscriber's bad phone number or dead webhook must
-never block or fail delivery to any other matched subscriber (RULES.md)."""
-
 import logging
 from collections.abc import Callable
 
@@ -72,7 +67,6 @@ class DispatchEscalationUseCase:
                     metadata={"alert_id": str(alert.id), "commodity_id": str(alert.commodity_id)},
                 )
             except Exception:
-                # Deliberately broad: one subscriber's failure must never block the rest.
                 logger.exception(
                     "failed to notify subscriber %s for alert %s", subscriber.id, alert.id
                 )

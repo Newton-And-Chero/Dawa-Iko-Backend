@@ -1,5 +1,3 @@
-"""Import facilities from a FacilityImportPort, deduping against existing rows."""
-
 from dataclasses import dataclass
 
 from app.application.ports.facility_import_port import FacilityImportPort

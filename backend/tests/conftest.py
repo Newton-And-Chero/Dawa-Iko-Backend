@@ -42,10 +42,6 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 async def make_user_token(
     db_session: AsyncSession,
 ) -> Callable[[UserRole], Awaitable[tuple[User, str]]]:
-    """Creates a `User` with a known password ("testpass123") and mints a
-    valid access token for it — the shared login fixture every role-gated
-    router test builds on."""
-
     async def _make(role: UserRole) -> tuple[User, str]:
         use_case = ManageUsersUseCase(SqlAlchemyUserRepository(db_session))
         user = await use_case.add_user(

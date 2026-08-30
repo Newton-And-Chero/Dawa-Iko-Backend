@@ -1,29 +1,3 @@
-"""Manual, human-operated smoke test against the REAL CALL-E API.
-
-This is the *only* place in the codebase allowed to place a real phone call
-(RULES.md: "never call a real external paid API from an automated test,
-ever"). It is a CLI script, not a test — pytest never collects anything
-under `scripts/`, nothing here is imported by a Celery task, and nothing
-here runs in CI. Keep it that way: do not import this module from
-`tests/`, `app/workers/`, or any place `pytest`/Celery could reach it.
-
-Bypasses `build_call_provider()`/`Settings.CALL_E_MODE` entirely and talks
-to `CallEAdapter` directly — an operator running this script wants a real
-call every time, regardless of whatever `CALL_E_MODE` happens to be set to
-in the local `.env`.
-
-Usage:
-    uv run python -m scripts.smoke_test_live_calle \\
-        --to +2547XXXXXXXX \\
-        --i-understand-this-costs-money-and-calls-a-real-phone
-
-Requires a real `CALLE_API_KEY` in the environment/`.env`. Does not touch
-the database — this only proves `POST /v1/calls` succeeds against the real
-API, nothing more. The webhook fires back only if `PUBLIC_BASE_URL` is a
-real, publicly reachable HTTPS URL — a script run against a local machine
-will place the call but never see the result land anywhere.
-"""
-
 import argparse
 import asyncio
 import sys

@@ -1,7 +1,3 @@
-"""Admin-only user management: create accounts (with a login password) and
-edit role/org/phone. Listing/get-by-id are plain repository reads, exposed
-here too so the router only ever talks to one use case per resource."""
-
 from dataclasses import dataclass
 from uuid import UUID
 

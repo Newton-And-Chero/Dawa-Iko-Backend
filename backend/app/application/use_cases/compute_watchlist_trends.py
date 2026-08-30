@@ -1,17 +1,3 @@
-"""Cross-commodity, cross-county comparison across the priority watchlist —
-PROJECT.md 2.8's "which essential medicines are most chronically
-unavailable, county comparison." Counties are caller-supplied: there is no
-cheap way to discover "every county a sweep has ever covered" from the
-JSONB `geography_scope` without scanning every sweep, and the caller (an
-analyst picking counties to compare, or a scheduled report) already knows
-which ones it cares about.
-
-Deferred (PROJECT.md §5, workflows/08 "Explicitly deferred"): correlating
-these rates against published KEMSA fill-rate data, and a ward-level
-chronic-stockout heatmap, would both plug in here as additional dimensions
-alongside `county` — not built in this sprint.
-"""
-
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -38,8 +24,6 @@ class WatchlistTrendRow:
 @dataclass(frozen=True)
 class WatchlistTrendsResult:
     rows: list[WatchlistTrendRow]
-    # Commodity ids ordered most-chronically-unavailable first (by mean
-    # stockout rate across the counties that have any sweep history).
     ranked_commodity_ids: list[UUID]
 
 

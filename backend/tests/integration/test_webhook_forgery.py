@@ -1,13 +1,3 @@
-"""Adversarial suite for `POST /webhooks/calle/{webhook_token}` (Sprint 09).
-
-CALL-E signs nothing (no HMAC, no `CALL-E-Signature` header — RULES.md), so
-this receiver is the only thing standing between an open internet endpoint
-and our Call/AvailabilityResult tables. Every case here must be rejected or
-safely no-op'd, never silently accepted as a real result. Run together as
-one suite per workflows/09, distinct from test_webhooks_route.py's own
-happy-path/persistence coverage (Sprint 03).
-"""
-
 from typing import Any
 
 from httpx import AsyncClient
@@ -127,13 +117,18 @@ async def test_missing_event_id_header_is_rejected(client: AsyncClient) -> None:
     assert response.status_code == 400
 
 
-async def test_call_id_never_dispatched_by_us_is_rejected(client: AsyncClient) -> None:
+async def test_call_id_never_dispatched_by_us_is_acknowledged_without_side_effects(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
     response = await client.post(
         _webhook_path(),
         json=_body("evt_forge_spoofed", "call_never_dispatched_by_us", "recip_x"),
         headers={"CALL-E-Event-Id": "evt_forge_spoofed"},
     )
-    assert response.status_code == 409
+    assert response.status_code == 200
+
+    results = await SqlAlchemyAvailabilityResultRepository(db_session).list_all()
+    assert results == []
 
 
 async def test_replayed_already_processed_event_id_is_a_safe_noop(
@@ -151,9 +146,6 @@ async def test_replayed_already_processed_event_id_is_a_safe_noop(
     first_result = await results_repo.get_by_call_id(call.id)
     assert first_result is not None
 
-    # A byte-for-byte replay of an already-processed event must not be
-    # treated as a second, independent result — CALL-E redelivers on its
-    # own retry schedule, and a naive receiver would double-count it.
     replay = await client.post(
         _webhook_path(), json=body, headers={"CALL-E-Event-Id": "evt_forge_replay"}
     )

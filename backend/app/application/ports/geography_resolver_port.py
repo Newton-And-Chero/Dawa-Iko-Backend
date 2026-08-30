@@ -1,5 +1,3 @@
-"""Port for resolving a GeographyScope into a candidate facility list."""
-
 from typing import Protocol
 
 from app.domain.entities.facility import Facility

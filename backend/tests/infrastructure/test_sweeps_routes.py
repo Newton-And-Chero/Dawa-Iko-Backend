@@ -1,11 +1,3 @@
-"""Sweeps router: POST /v1/sweeps/query (public + rate-limited),
-GET /v1/sweeps/{id} (public), GET /v1/sweeps (analyst+),
-POST /v1/sweeps/scheduled (admin/analyst).
-
-Rate-limit abuse (burst past the limit, reset, Redis key TTL) is its own
-adversarial suite in tests/integration/test_rate_limit_abuse.py (Sprint 09).
-"""
-
 from collections.abc import Awaitable, Callable
 
 from httpx import AsyncClient

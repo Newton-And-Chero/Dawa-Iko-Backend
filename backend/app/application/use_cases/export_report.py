@@ -1,8 +1,3 @@
-"""Ties one Sprint 08 analytics use case's structured output to a CSV/PDF
-renderer — the `GET /analytics/export` route's use case. `report` + `format`
-select which compute-then-render pair runs; everything else is that
-report's own parameters, forwarded straight through."""
-
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal

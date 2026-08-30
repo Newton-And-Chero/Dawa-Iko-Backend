@@ -1,7 +1,3 @@
-"""List subscribers — no filter is required by this sprint's checklist, so
-this is a thin pass-through over the repository (mirrors `list_commodities`'s
-shape for consistency, without inventing an unused filter dataclass)."""
-
 from uuid import UUID
 
 from app.application.ports.subscriber_repository import SubscriberRepositoryPort

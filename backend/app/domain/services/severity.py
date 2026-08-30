@@ -1,13 +1,7 @@
-"""Stockout severity classification. Pure function — no DB, no framework."""
-
 from app.domain.enums import EscalationSeverity
 
-# Below this fraction of facilities in stock, a sweep is scarce enough to
-# warrant a stockout alert at all.
 _SCARCITY_THRESHOLD = 0.5
 
-# A facility_density at or below this count is treated as "sparse" — a
-# patient has few nearby alternatives, so the same stockout is more severe.
 _SPARSE_DENSITY = 3
 
 
@@ -17,11 +11,6 @@ def classify_severity(
     facilities_with_stock_count: int,
     facility_density: int,
 ) -> EscalationSeverity | None:
-    """Classify stockout severity, or ``None`` if no alert is warranted.
-
-    ``None`` covers both "nothing was actually checked" and "enough stock
-    exists that this isn't a stockout."
-    """
     if facilities_checked_count == 0:
         return None
 

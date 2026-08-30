@@ -1,5 +1,4 @@
-"""SQLAlchemy implementation of WebhookEventRepositoryPort."""
-
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,10 +6,13 @@ from app.infrastructure.db.models import WebhookEventModel
 
 
 class SqlAlchemyWebhookEventRepository:
-    """Implements WebhookEventRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    async def was_processed(self, event_id: str) -> bool:
+        stmt = select(WebhookEventModel.id).where(WebhookEventModel.id == event_id)
+        result = await self._session.execute(stmt)
+        return result.first() is not None
 
     async def mark_processed(self, event_id: str) -> bool:
         stmt = (

@@ -1,17 +1,9 @@
-"""Add Facility.phone_verification_status.
-
-Revision ID: 0002
-Revises: 0001
-Create Date: 2026-08-20
-"""
-
 from collections.abc import Sequence
 
 import sqlalchemy as sa
 
 from alembic import op
 
-# revision identifiers, used by Alembic.
 revision: str = "0002"
 down_revision: str | None = "0001"
 branch_labels: Sequence[str] | None = None

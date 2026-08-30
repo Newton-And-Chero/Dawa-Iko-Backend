@@ -1,9 +1,3 @@
-"""DetectStockoutUseCase — threshold/severity wiring against in-memory fakes.
-`domain/services/severity.py` already covers the classification matrix
-(tests/domain/test_severity.py); these tests cover the use case's own job:
-counting calls/results for a sweep and deciding whether to call it at all.
-"""
-
 from uuid import uuid4
 
 import pytest
@@ -115,8 +109,6 @@ async def test_zero_stock_creates_an_alert_and_publishes_it(setup: dict) -> None
 
 
 async def test_below_threshold_but_above_scarcity_still_creates_an_alert(setup: dict) -> None:
-    """3/10 in stock: below the 0.5 threshold gate, and severity.py itself
-    still finds it scarce enough (see test_severity.py's own matrix)."""
     sweep = await _seed_sweep(setup)
     for _ in range(3):
         await _seed_call_with_result(setup, sweep.id, StockStatus.YES)

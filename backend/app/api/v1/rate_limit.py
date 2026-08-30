@@ -1,8 +1,3 @@
-"""Redis-backed fixed-window rate limit for `POST /sweeps/query` — the one
-endpoint that spends real money and rings real phones if abused (PROJECT.md
-2.6). Keyed by client IP; window/limit configurable via `Settings`.
-"""
-
 from fastapi import Depends, HTTPException, Request
 
 from app.core.config import Settings, get_settings

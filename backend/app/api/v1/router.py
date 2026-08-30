@@ -1,5 +1,3 @@
-"""Aggregates every versioned (`/v1`) router (Sprint 05)."""
-
 from fastapi import APIRouter
 
 from app.api.v1.routers.analytics import router as analytics_router

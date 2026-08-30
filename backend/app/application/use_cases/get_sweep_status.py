@@ -1,6 +1,3 @@
-"""Sweep progress: the sweep's own fields plus counts by Call.status, for
-polling (Sprint 05 exposes this over HTTP; Sprint 06 pushes it over WS)."""
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any

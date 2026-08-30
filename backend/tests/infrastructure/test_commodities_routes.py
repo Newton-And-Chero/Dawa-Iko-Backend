@@ -1,5 +1,3 @@
-"""Commodities router: GET/POST /v1/commodities, GET/PATCH /v1/commodities/{id}."""
-
 from collections.abc import Awaitable, Callable
 
 from httpx import AsyncClient

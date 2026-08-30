@@ -1,14 +1,3 @@
-"""Redis pub/sub-backed RealtimeEventBus (Sprint 06).
-
-Why Redis pub/sub and not an in-process broadcaster: the webhook that
-produces an event may be handled by any Celery worker or any API process
-(once this runs with more than one uvicorn worker), while the WS client is
-connected to one specific API process. Redis pub/sub is the one piece of
-shared infrastructure every process already has (Sprint 00), so it's the
-fan-out point — publish once per channel, every subscribed process delivers
-to its own connected clients.
-"""
-
 import json
 from collections.abc import AsyncIterator
 from typing import Any

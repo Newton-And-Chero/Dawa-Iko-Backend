@@ -1,18 +1,8 @@
-"""Static Celery Beat schedule: recurring watchlist sweeps + the retry sweep.
-
-Watchlist entries name a commodity by `keml_code` and a county, resolved to a
-commodity id at task run time (`sweep_tasks.py`) rather than frozen here —
-commodity UUIDs don't exist until the DB is seeded. Mirrors PROJECT.md's own
-example: "sweep carbetocin across Kirinyaga weekly".
-"""
-
 from celery.schedules import crontab
 
-# (commodity_keml_code, county) — data/seed/commodities_keml.json is the
-# source of truth for these synthetic KEML codes.
 WATCHLIST_SWEEPS: list[tuple[str, str]] = [
-    ("KEML-SYN-0001", "Kirinyaga"),  # Carbetocin
-    ("KEML-SYN-0003", "Nairobi"),  # Human Insulin (Soluble)
+    ("KEML-SYN-0001", "Kirinyaga"),
+    ("KEML-SYN-0003", "Nairobi"),
 ]
 
 BEAT_SCHEDULE = {
@@ -25,11 +15,8 @@ BEAT_SCHEDULE = {
 } | {
     "retry-failed-calls": {
         "task": "app.workers.sweep_tasks.retry_failed_calls_task",
-        "schedule": crontab(minute=0),  # hourly
+        "schedule": crontab(minute=0),
     },
-    # Off-peak daily batch (workflows/08): Facility.reliability_score is a
-    # cached/derived field, recomputed on a schedule rather than on every
-    # call's webhook.
     "recompute-facility-reliability": {
         "task": "app.workers.analytics_tasks.recompute_facility_reliability_task",
         "schedule": crontab(hour=2, minute=0),

@@ -1,12 +1,3 @@
-"""Sweep request/response schemas.
-
-`GeographyScopeIn` mirrors `app.domain.value_objects.geography_scope`'s
-tagged union as a discriminated Pydantic union, using the exact same "kind"
-keys `geography_scope_from_dict` already parses — so converting a validated
-request body to the domain `GeographyScope` is just `model_dump()` +
-`geography_scope_from_dict()`, no separate mapping to maintain.
-"""
-
 from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Any, Literal
@@ -53,10 +44,6 @@ GeographyScopeIn = Annotated[
 
 
 class SweepQueryIn(BaseModel):
-    """Body for `POST /sweeps/query` and `POST /sweeps/scheduled` — commodity
-    by id or name/alias (PROJECT.md 2.2/2.6), geography as one GeographyScope
-    variant."""
-
     commodity: str
     geography: GeographyScopeIn
 
@@ -66,11 +53,6 @@ class SweepAccepted(BaseModel):
 
 
 class SweepSummaryOut(BaseModel):
-    """`GET /sweeps` list rows — field names mirror the `Sweep` domain entity
-    exactly (Sprint 01). No per-sweep call-progress counts here (that's the
-    `GET /sweeps/{sweep_id}` detail view, `SweepOut` below) — computing them
-    for every row of a bulk list isn't worth the per-row query."""
-
     id: UUID
     commodity_id: UUID
     geography_scope: dict[str, Any]
@@ -81,9 +63,6 @@ class SweepSummaryOut(BaseModel):
 
 
 class PatientMatchOut(BaseModel):
-    """One in-stock facility match, ranked by distance then confidence
-    (PROJECT.md 2.5/2.7) — built by `build_patient_match_response`."""
-
     facility_id: UUID
     facility_name: str
     distance_meters: float | None

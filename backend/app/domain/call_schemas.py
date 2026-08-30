@@ -1,34 +1,14 @@
-"""The fixed stock-check question set, as data — not scattered string literals.
-
-Sprint 04+ commodity-specific variants (cold-chain, expiry) extend this same
-structure rather than duplicating it.
-"""
-
 from typing import Any
 
-# CALL-E's Kenya (KE) region is English-only (see RULES.md) — no Swahili branch.
 CALLE_RECIPIENT_REGION = "KE"
-# BCP 47 locale hint. CALL-E's docs don't enumerate a Kenya-specific code; "en-KE"
-# is the standard tag for English (Kenya) and the closest correct choice available.
-CALLE_RECIPIENT_LOCALE = "en-KE"
+CALLE_RECIPIENT_LOCALE = "en-US"
 
 _QUANTITY_BANDS = ["low", "medium", "high"]
 
-# Every field is nullable and required per CALL-E's own convention for
-# "ask for a value but allow an honest unknown" (see fetched OpenAPI spec) —
-# an uncertain answer must be extractable as null/"unknown", never guessed.
 STOCK_CHECK_RESULT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": [
-        "in_stock",
-        "quantity_band",
-        "price_kes",
-        "last_restock_date",
-        "can_hold",
-        "hold_duration_hours",
-        "notes",
-    ],
+    "required": ["in_stock"],
     "properties": {
         "in_stock": {
             "type": "string",
@@ -40,41 +20,49 @@ STOCK_CHECK_RESULT_SCHEMA: dict[str, Any] = {
             ),
         },
         "quantity_band": {
-            "type": ["string", "null"],
-            "enum": [*_QUANTITY_BANDS, None],
+            "type": "string",
+            "enum": [*_QUANTITY_BANDS, "unknown"],
             "description": (
-                "Rough quantity on hand, only when in_stock is 'yes'. Null otherwise "
-                "or when the respondent could not estimate."
+                "Rough quantity on hand when in_stock is 'yes'. Use 'unknown' when "
+                "in_stock is not 'yes' or the respondent could not estimate."
             ),
         },
         "price_kes": {
-            "type": ["number", "null"],
-            "description": "Current unit price in Kenyan shillings, only when in_stock is 'yes'.",
+            "type": "number",
+            "description": (
+                "Current unit price in Kenyan shillings when in_stock is 'yes'. "
+                "Omit this field entirely if the respondent did not give a price."
+            ),
         },
         "last_restock_date": {
-            "type": ["string", "null"],
-            "format": "date",
+            "type": "string",
             "description": (
-                "ISO 8601 date of the last restock, if the respondent gave one — "
-                "most relevant when in_stock is 'no'."
+                "Date of the last restock as an ISO 8601 date (YYYY-MM-DD), most "
+                "relevant when in_stock is 'no'. Omit this field entirely if the "
+                "respondent did not give a date."
             ),
         },
         "can_hold": {
-            "type": ["boolean", "null"],
+            "type": "boolean",
             "description": (
                 "Whether the facility offered to hold a unit for a patient, only "
-                "when in_stock is 'yes'."
+                "when in_stock is 'yes'. Omit this field entirely if it did not "
+                "come up."
             ),
         },
         "hold_duration_hours": {
-            "type": ["number", "null"],
-            "description": "Hours the facility offered to hold a unit, if can_hold is true.",
+            "type": "number",
+            "description": (
+                "Hours the facility offered to hold a unit, when can_hold is true. "
+                "Omit this field entirely otherwise."
+            ),
         },
         "notes": {
-            "type": ["string", "null"],
+            "type": "string",
             "description": (
                 "Any other relevant detail the respondent gave, e.g. a nearby facility "
-                "that might have stock, or an expected restock date."
+                "that might have stock, or an expected restock date. Omit if there is "
+                "nothing to add."
             ),
         },
     },
@@ -82,12 +70,6 @@ STOCK_CHECK_RESULT_SCHEMA: dict[str, Any] = {
 
 
 def build_stock_check_task(commodity_name: str) -> str:
-    """The natural-language task instruction sent to CALL-E for one stock-check call.
-
-    CALL-E's own agent handles live conversational branching from this prompt —
-    we are instructing it what to ask and extract, not building a DTMF/decision
-    tree engine ourselves.
-    """
     return (
         f"You are calling on behalf of an independent medicine availability "
         f"monitoring service. You are NOT calling from the Ministry of Health, "

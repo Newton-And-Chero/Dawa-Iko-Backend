@@ -1,10 +1,3 @@
-"""Settings-driven selection of a FacilityImportPort implementation.
-
-Same pattern as CALL_E_MODE: the use-case layer only ever depends on
-FacilityImportPort and never knows whether it's talking to the mock or the
-real adapter.
-"""
-
 from pathlib import Path
 
 from app.application.ports.facility_import_port import FacilityImportPort

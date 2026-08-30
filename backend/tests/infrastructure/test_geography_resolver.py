@@ -1,5 +1,3 @@
-"""PostGISGeographyResolver against a real Postgres+PostGIS instance."""
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.facility import Facility
@@ -14,7 +12,6 @@ from app.domain.value_objects.geography_scope import (
 from app.infrastructure.db.repositories.facility_repository import SqlAlchemyFacilityRepository
 from app.infrastructure.geo.postgis_geography_resolver import PostGISGeographyResolver
 
-# Kerugoya town center-ish, used as the shared point reference for radius/nearest_n.
 _ORIGIN_LAT, _ORIGIN_LNG = -0.5, 37.28
 
 

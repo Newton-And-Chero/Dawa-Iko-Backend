@@ -1,7 +1,3 @@
-"""Analytics response schemas (Sprint 08). Field names mirror the use-case
-result dataclasses in `application/use_cases/compute_*.py` exactly; each
-`from_result` classmethod is the one place that mapping is written."""
-
 from datetime import date
 from uuid import UUID
 

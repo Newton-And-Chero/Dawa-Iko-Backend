@@ -1,5 +1,3 @@
-"""Integration tests for ImportFacilitiesUseCase against a real DB."""
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.use_cases.import_facilities import ImportFacilitiesUseCase

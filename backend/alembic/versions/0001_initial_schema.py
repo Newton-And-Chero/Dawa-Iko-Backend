@@ -1,10 +1,3 @@
-"""Initial schema — all Sprint 01 entities.
-
-Revision ID: 0001
-Revises:
-Create Date: 2026-08-20
-"""
-
 from collections.abc import Sequence
 
 import geoalchemy2
@@ -13,7 +6,6 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-# revision identifiers, used by Alembic.
 revision: str = "0001"
 down_revision: str | None = None
 branch_labels: Sequence[str] | None = None

@@ -1,8 +1,3 @@
-"""EmailNotifier — simple SMTP delivery for subscribers with
-notification_channel=email. Mirrors the mock/live split every other
-real-world-side-effect adapter uses (RULES.md): `Settings.EMAIL_MODE=mock`
-(the default) logs instead of sending; `live` sends via SMTP."""
-
 import asyncio
 import logging
 import smtplib
@@ -17,8 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class EmailNotifier:
-    """Implements NotifierPort."""
-
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
 

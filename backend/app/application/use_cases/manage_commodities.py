@@ -1,5 +1,3 @@
-"""Commodity add/edit and priority-watchlist tagging."""
-
 from dataclasses import dataclass, field
 from uuid import UUID
 

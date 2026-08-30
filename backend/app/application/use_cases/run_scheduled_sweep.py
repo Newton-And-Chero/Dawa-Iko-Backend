@@ -1,9 +1,3 @@
-"""Scheduled sweep: same resolve -> throttle -> chunk -> dispatch pipeline as
-`run_on_demand_sweep`, triggered by Celery Beat for a watchlist commodity x
-geography pair (`app/workers/beat_schedule.py`) rather than a human request —
-there is no `requester_id`.
-"""
-
 from uuid import UUID
 
 from app.application.ports.call_provider_port import CallProviderPort

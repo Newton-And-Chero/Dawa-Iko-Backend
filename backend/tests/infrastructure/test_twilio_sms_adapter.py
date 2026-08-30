@@ -1,10 +1,3 @@
-"""TwilioSmsAdapter response handling.
-
-No real API is hit: a `httpx.MockTransport` stands in for Twilio so every wire
-shape — accepted, per-message error (4xx), failed status, transport error,
-non-JSON body — and the SMS_DEMO_REDIRECT_NUMBERS guardrail can be asserted.
-"""
-
 import httpx
 
 from app.core.config import Settings
@@ -58,9 +51,7 @@ async def test_accepted_message_is_success():
 
 async def test_api_error_is_failure():
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            400, json={"code": 21211, "message": "The 'To' number is not valid"}
-        )
+        return httpx.Response(400, json={"code": 21211, "message": "The 'To' number is not valid"})
 
     result = await _send(_adapter(handler))
 
@@ -71,9 +62,7 @@ async def test_api_error_is_failure():
 
 async def test_failed_status_is_failure_despite_201():
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            201, json={"sid": "SM1", "status": "failed", "error_code": 30006}
-        )
+        return httpx.Response(201, json={"sid": "SM1", "status": "failed", "error_code": 30006})
 
     result = await _send(_adapter(handler))
 
@@ -117,10 +106,9 @@ async def test_demo_redirect_fans_out_to_every_demo_number_and_skips_recipient()
 
     def handler(request: httpx.Request) -> httpx.Response:
         body = request.content.decode()
-        # httpx form-encodes; pull the To value back out for the assertion.
         to = dict(pair.split("=", 1) for pair in body.split("&"))["To"]
         seen.append(to)
-        assert "for+%2B254711000111" in body  # original recipient noted in body
+        assert "for+%2B254711000111" in body
         return httpx.Response(201, json=_ok_body())
 
     adapter = _adapter(
@@ -130,16 +118,12 @@ async def test_demo_redirect_fans_out_to_every_demo_number_and_skips_recipient()
     result = await _send(adapter)
 
     assert result.success is True
-    assert sorted(seen) == sorted(
-        ["%2B254792036343", "%2B254793586004", "%2B254720168641"]
-    )
+    assert sorted(seen) == sorted(["%2B254792036343", "%2B254793586004", "%2B254720168641"])
 
 
 async def test_demo_redirect_reports_failure_if_any_number_fails():
     def handler(request: httpx.Request) -> httpx.Response:
-        to = dict(
-            pair.split("=", 1) for pair in request.content.decode().split("&")
-        )["To"]
+        to = dict(pair.split("=", 1) for pair in request.content.decode().split("&"))["To"]
         if to == "%2B254793586004":
             return httpx.Response(400, json={"code": 21608, "message": "unverified"})
         return httpx.Response(201, json=_ok_body())

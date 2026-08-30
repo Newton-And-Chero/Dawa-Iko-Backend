@@ -1,5 +1,3 @@
-"""Admin-only user management: GET/POST /v1/users, GET/PATCH /v1/users/{id}."""
-
 from collections.abc import Awaitable, Callable
 
 from httpx import AsyncClient

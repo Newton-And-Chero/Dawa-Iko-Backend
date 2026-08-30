@@ -1,5 +1,3 @@
-"""Port for placing and querying calls with the outbound voice provider (CALL-E)."""
-
 from typing import Any, Protocol
 
 from app.domain.value_objects.call_task_ref import CallEventRef, CallRecipient, CallTaskRef

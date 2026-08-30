@@ -1,5 +1,3 @@
-"""FastAPI app factory."""
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -26,11 +24,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(v1_router)
-    # Mounted without the /v1 prefix: not part of the public API surface (see
-    # workflows/03) — this is where CALL-E's webhook_url points.
     app.include_router(webhooks_router)
-    # WS routes also mounted without the /v1 prefix (workflows/06):
-    # `/ws/sweeps/{sweep_id}`, `/ws/live`.
     app.include_router(sweep_ws_router)
     app.include_router(geography_ws_router)
 

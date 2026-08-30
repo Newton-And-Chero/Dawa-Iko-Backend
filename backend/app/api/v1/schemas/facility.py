@@ -1,6 +1,3 @@
-"""Facility request/response schemas — field names mirror the `Facility`
-domain entity exactly (Sprint 01)."""
-
 from datetime import datetime
 from uuid import UUID
 

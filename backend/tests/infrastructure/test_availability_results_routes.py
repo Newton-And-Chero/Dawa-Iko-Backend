@@ -1,5 +1,3 @@
-"""GET /v1/availability-results — public, ranked, filterable."""
-
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 

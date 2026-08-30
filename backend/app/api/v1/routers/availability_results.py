@@ -1,12 +1,3 @@
-"""GET /availability-results — the ranked "where can I get X" read surface
-(PROJECT.md 2.7's query view spec): in-stock first, most confident first.
-
-Deliberately `public` (no auth dependency): this is the aggregate/ranked
-result surface the public role is allowed to read (RULES.md), and it never
-carries a facility phone number or call transcript — just commodity/facility
-ids, stock status, price, and hold info.
-"""
-
 import dataclasses
 from datetime import datetime
 from uuid import UUID

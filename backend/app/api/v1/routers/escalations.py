@@ -1,12 +1,3 @@
-"""Escalations router: `GET /escalations` (filter by status/severity/geography/
-commodity), `POST /escalations/{id}/acknowledge`, `POST /escalations/{id}/resolve`.
-
-Every route requires at least `viewer` (RULES.md's data-minimization
-default); acknowledge/resolve are analyst/admin actions — a `Subscriber` has
-no login of its own (PROJECT.md's data model keeps Subscriber and User
-distinct), so a logged-in analyst relays the subscriber's action.
-"""
-
 import dataclasses
 from uuid import UUID
 

@@ -1,14 +1,3 @@
-"""Analytics router (Sprint 08): stockout-rate/facility-reliability/
-watchlist-trends reads, plus a CSV/PDF export endpoint. Read-only — every
-route here only reads Sweep/Call/AvailabilityResult data other sprints
-already wrote; nothing here mutates those tables (workflows/08).
-
-Gated to `viewer` and up: this is aggregate/derived analytical data, not raw
-operational data carrying a phone number or transcript, so it sits at the
-same bar as the `escalations`/`facilities` routers rather than needing
-`analyst`.
-"""
-
 from datetime import datetime
 from uuid import UUID
 

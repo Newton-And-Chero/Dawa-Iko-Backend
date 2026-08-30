@@ -1,9 +1,3 @@
-"""Calls router: GET /v1/calls, GET /v1/calls/{id}, POST /v1/calls/{id}/retry.
-
-Responses include transcript/recording URLs, so every route requires at
-least `viewer`; the retry action requires admin/analyst.
-"""
-
 from collections.abc import Awaitable, Callable
 
 from httpx import AsyncClient

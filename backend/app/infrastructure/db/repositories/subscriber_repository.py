@@ -1,5 +1,3 @@
-"""SQLAlchemy implementation of SubscriberRepositoryPort."""
-
 from uuid import UUID
 
 from sqlalchemy import select
@@ -39,8 +37,6 @@ def _to_model(subscriber: Subscriber) -> SubscriberModel:
 
 
 class SqlAlchemySubscriberRepository:
-    """Implements SubscriberRepositoryPort."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

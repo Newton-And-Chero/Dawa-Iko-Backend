@@ -1,6 +1,3 @@
-"""Analytics router: GET /v1/analytics/{stockout-rate,facility-reliability,
-watchlist-trends,export}."""
-
 import csv
 import io
 from collections.abc import Awaitable, Callable
@@ -144,7 +141,7 @@ async def test_facility_reliability_endpoint(
 
     assert response.status_code == 200
     rows = response.json()
-    assert len(rows) == 5  # 3 + 2 facilities seeded across the two sweeps
+    assert len(rows) == 5
     assert all(row["reliability_score"] is not None for row in rows)
     assert commodity is not None
 
@@ -165,7 +162,7 @@ async def test_watchlist_trends_endpoint(
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body["rows"]) == 2  # 1 watchlist commodity x 2 counties
+    assert len(body["rows"]) == 2
     assert len(body["ranked_commodity_ids"]) == 1
 
 

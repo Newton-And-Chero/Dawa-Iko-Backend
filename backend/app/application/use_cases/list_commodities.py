@@ -1,5 +1,3 @@
-"""List/filter commodities."""
-
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -13,7 +11,6 @@ from app.domain.enums import CommodityCategory
 class CommodityFilter:
     category: CommodityCategory | None = None
     is_priority_watchlist: bool | None = None
-    # Fuzzy match against name or any alias, e.g. "PPH drug" -> carbetocin.
     search: str | None = None
 
 

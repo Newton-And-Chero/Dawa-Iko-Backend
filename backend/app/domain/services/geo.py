@@ -1,5 +1,3 @@
-"""Great-circle distance calculations. Pure — no DB, no framework."""
-
 import math
 
 _EARTH_RADIUS_METERS = 6_371_000.0

@@ -1,8 +1,3 @@
-"""SqlAlchemyAnalyticsRepository — the one place Sprint 08's hand-written
-aggregate SQL lives. Seeds a small multi-sweep history against a real
-Postgres instance and asserts the aggregate numbers directly, not just
-"doesn't crash" (workflows/08's testing requirement)."""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -53,7 +48,6 @@ async def _seed_sweep_with_results(
     created_at: datetime,
     in_stock_flags: list[bool],
 ) -> None:
-    """One sweep with one Call+AvailabilityResult per flag in `in_stock_flags`."""
     sweep = await SqlAlchemySweepRepository(session).add(
         Sweep(
             commodity_id=commodity_id,
@@ -93,14 +87,14 @@ async def test_list_sweep_stock_summaries_counts_checked_and_in_stock(
         commodity_id=commodity.id,
         geography={"kind": "county", "county": "Kirinyaga"},
         created_at=week1,
-        in_stock_flags=[False, False, True],  # 1/3 in stock
+        in_stock_flags=[False, False, True],
     )
     await _seed_sweep_with_results(
         db_session,
         commodity_id=commodity.id,
         geography={"kind": "county", "county": "Kirinyaga"},
         created_at=week2,
-        in_stock_flags=[True, True],  # 2/2 in stock
+        in_stock_flags=[True, True],
     )
 
     repo = SqlAlchemyAnalyticsRepository(db_session)

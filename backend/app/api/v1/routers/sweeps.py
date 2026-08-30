@@ -1,14 +1,3 @@
-"""Sweeps router — includes `POST /sweeps/query`, the public on-demand query
-path PROJECT.md 2.6 calls out as the demo path: commodity + geography ->
-resolve -> parallel calls -> `sweep_id` to poll.
-
-`POST /sweeps/query` and `GET /sweeps/{sweep_id}` are deliberately public
-(no auth dependency): an anonymous caller triggers a query and must be able
-to poll its own sweep's status without a token, or the public demo path
-can't complete its own loop. `GET /sweeps` (every sweep ever run) and
-`POST /sweeps/scheduled` are not part of that public surface.
-"""
-
 import dataclasses
 from datetime import datetime
 from uuid import UUID
@@ -66,8 +55,6 @@ _analyst_up = [Depends(require_role(UserRole.ADMIN, UserRole.ANALYST))]
 async def _resolve_commodity_id(
     commodity_field: str, commodity_repository: CommodityRepositoryPort
 ) -> UUID:
-    """`commodity` is an id, or a name/alias to fuzzy-match (PROJECT.md 2.6,
-    e.g. "PPH drug" -> carbetocin). Raises NotFoundError on no match."""
     try:
         return UUID(commodity_field)
     except ValueError:

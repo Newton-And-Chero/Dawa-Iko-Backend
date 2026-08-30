@@ -1,16 +1,3 @@
-"""Pure stockout-rate/duration computations over `SweepStockSummary` rows —
-PROJECT.md 2.7/2.8's "unavailable in this ward for 6 of the last 8 weeks"
-framing. No DB, no framework: `analytics_repository.py` does the SQL
-aggregation into `SweepStockSummary`; this module turns that sequence into
-rate/streak numbers.
-
-A sweep counts as "stockout" when its in-stock fraction is at or below
-`threshold_pct` — the same `<=` boundary `DetectStockoutUseCase` uses via
-`Settings.STOCKOUT_THRESHOLD_PCT` (it treats `> threshold` as "not scarce
-enough"), so historical rates stay consistent with what actually triggered a
-`StockoutAlert` at the time.
-"""
-
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -44,7 +31,7 @@ def _bucket_start(when: datetime, granularity: BucketGranularity) -> date:
     day = when.date()
     if granularity == "month":
         return day.replace(day=1)
-    return day - timedelta(days=day.weekday())  # Monday-start week
+    return day - timedelta(days=day.weekday())
 
 
 def bucket_stockout_rate(
@@ -53,8 +40,6 @@ def bucket_stockout_rate(
     threshold_pct: float,
     granularity: BucketGranularity,
 ) -> list[StockoutRateBucket]:
-    """`summaries` may be in any order. Returns one bucket per period that
-    had at least one sweep, oldest first."""
     buckets: dict[date, list[SweepStockSummary]] = {}
     for summary in summaries:
         key = _bucket_start(summary.created_at, granularity)
@@ -73,9 +58,6 @@ def bucket_stockout_rate(
 def compute_stockout_streak(
     summaries: Sequence[SweepStockSummary], *, threshold_pct: float
 ) -> StockoutStreak:
-    """`summaries` may be in any order — sorted by `created_at` here so the
-    caller doesn't have to. `current_streak` counts back from the most
-    recent sweep; a non-stockout (or no) most-recent sweep means 0."""
     ordered = sorted(summaries, key=lambda s: s.created_at)
 
     longest = 0

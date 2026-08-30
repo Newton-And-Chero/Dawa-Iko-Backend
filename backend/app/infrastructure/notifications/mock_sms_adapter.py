@@ -1,8 +1,3 @@
-"""MockSMSAdapter — implements NotifierPort by logging instead of sending.
-Selected via `Settings.SMS_MODE=mock` (default everywhere except an explicit
-production-like environment, per RULES.md). Records every send in `.sent`
-for test assertions."""
-
 import logging
 from typing import Any
 
@@ -13,8 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class MockSMSAdapter:
-    """Implements NotifierPort. Zero real SMS is ever sent."""
-
     def __init__(self) -> None:
         self.sent: list[dict[str, Any]] = []
 

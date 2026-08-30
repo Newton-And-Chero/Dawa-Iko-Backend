@@ -1,7 +1,3 @@
-"""Subscriber add/edit — admin-managed (PROJECT.md's data model keeps
-Subscriber distinct from User: a subscriber receives alerts, a user logs in;
-a person can be both without those being the same row)."""
-
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID

@@ -1,7 +1,3 @@
-"""List/filter sweeps, and fetch one by id — the read side of sweep
-management (`RunOnDemandSweepUseCase`/`RunScheduledSweepUseCase` are the
-write side)."""
-
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
@@ -15,9 +11,6 @@ from app.domain.enums import SweepStatus
 @dataclass
 class SweepFilter:
     commodity_id: UUID | None = None
-    # Substring match against the sweep's geography_scope (e.g. a county or
-    # ward name) — GeographyScope is a tagged union stored as JSONB, so this
-    # is a simple text match rather than a scope-kind-aware query.
     geography: str | None = None
     status: SweepStatus | None = None
     date_from: datetime | None = None

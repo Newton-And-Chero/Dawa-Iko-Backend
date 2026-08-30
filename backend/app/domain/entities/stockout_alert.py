@@ -1,5 +1,3 @@
-"""StockoutAlert entity."""
-
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -18,6 +16,4 @@ class StockoutAlert:
     id: UUID = field(default_factory=uuid4)
     status: EscalationStatus = EscalationStatus.OPEN
     triggered_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    # Free-text note a subscriber/analyst leaves when acknowledging (e.g.
-    # "redistributing stock from Sagana") — PROJECT.md 2.5.
     acknowledgment_note: str | None = None

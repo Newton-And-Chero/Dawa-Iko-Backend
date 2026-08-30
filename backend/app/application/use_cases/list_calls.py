@@ -1,7 +1,3 @@
-"""List calls and fetch one by id. No filters in this sprint's checklist —
-`GET /calls` is a plain paginated list; `AvailabilityResult` is the filtered,
-ranked read path a "where can I get X" view is built from."""
-
 from uuid import UUID
 
 from app.application.ports.call_repository import CallRepositoryPort

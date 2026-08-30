@@ -1,5 +1,3 @@
-"""List/filter facilities."""
-
 from dataclasses import dataclass
 from uuid import UUID
 
