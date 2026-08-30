@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import (
+    get_call_gate,
     get_call_provider,
     get_realtime_event_bus,
     page_params,
@@ -20,6 +21,7 @@ from app.api.v1.schemas.sweep import (
     SweepQueryIn,
     SweepSummaryOut,
 )
+from app.application.ports.call_gate_port import CallGatePort
 from app.application.ports.call_provider_port import CallProviderPort
 from app.application.ports.commodity_repository import CommodityRepositoryPort
 from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
@@ -82,6 +84,7 @@ async def query(
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
     call_provider: CallProviderPort = Depends(get_call_provider),
+    call_gate: CallGatePort = Depends(get_call_gate),
     realtime_event_bus: RealtimeEventBusPort = Depends(get_realtime_event_bus),
     _rate_limit: None = Depends(rate_limit_public_query),
 ) -> SweepAccepted:
@@ -98,6 +101,7 @@ async def query(
         sweep_repository=SqlAlchemySweepRepository(session),
         commodity_repository=commodity_repository,
         call_provider=call_provider,
+        call_gate=call_gate,
         settings=settings,
         realtime_event_bus=realtime_event_bus,
     )
@@ -156,6 +160,7 @@ async def create_scheduled_sweep(
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
     call_provider: CallProviderPort = Depends(get_call_provider),
+    call_gate: CallGatePort = Depends(get_call_gate),
     realtime_event_bus: RealtimeEventBusPort = Depends(get_realtime_event_bus),
 ) -> SweepAccepted:
     commodity_repository = SqlAlchemyCommodityRepository(session)
@@ -171,6 +176,7 @@ async def create_scheduled_sweep(
         sweep_repository=SqlAlchemySweepRepository(session),
         commodity_repository=commodity_repository,
         call_provider=call_provider,
+        call_gate=call_gate,
         settings=settings,
         realtime_event_bus=realtime_event_bus,
     )

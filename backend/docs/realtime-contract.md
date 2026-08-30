@@ -143,6 +143,16 @@ Same shape as `sweep.progress`, published to `sweep:{sweep_id}` when
 This is the terminal event for a sweep — no further events publish to its
 channel afterward.
 
+> **Call engine off / empty sweep.** When the global call-engine switch is
+> off (see `api.md` → "Call engine"), or when every candidate facility is
+> filtered out by cooldown, a sweep goes straight from `queued` to
+> `completed` without ever dispatching a call. On its channel you get the
+> `sweep.snapshot` then a single `sweep.completed` with `total_calls: 0`,
+> `counts_by_status: {}`, and (in the snapshot) `matches: []` — **no**
+> `sweep.progress`, `call.status_changed`, or `availability_result.created`
+> events. Treat `sweep.completed` as terminal regardless of whether any call
+> events preceded it.
+
 ### `alert.created`
 
 Published to the `alerts` channel (see below) whenever `DetectStockoutUseCase`

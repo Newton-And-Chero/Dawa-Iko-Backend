@@ -1,8 +1,10 @@
+import contextlib
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from uuid import uuid4
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.use_cases.manage_users import ManageUsersUseCase, NewUser
@@ -10,6 +12,8 @@ from app.core.config import get_settings
 from app.core.security import create_access_token
 from app.domain.entities.user import User
 from app.domain.enums import UserRole
+from app.infrastructure.cache.redis import get_redis
+from app.infrastructure.call_e.redis_call_gate import CALL_ENGINE_ENABLED_KEY
 from app.infrastructure.db.models import Base
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from app.infrastructure.db.session import async_session_factory, engine
@@ -27,6 +31,21 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 async def _dispose_engine_at_session_end() -> AsyncGenerator[None, None]:
     yield
     await engine.dispose()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _call_engine_enabled() -> AsyncGenerator[None, None]:
+    redis = get_redis()
+    try:
+        await redis.set(CALL_ENGINE_ENABLED_KEY, "on")
+    except RedisError:
+        yield
+        return
+    try:
+        yield
+    finally:
+        with contextlib.suppress(RedisError):
+            await redis.delete(CALL_ENGINE_ENABLED_KEY)
 
 
 @pytest_asyncio.fixture

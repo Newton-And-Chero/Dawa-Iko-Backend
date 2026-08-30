@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from app.application.ports.call_gate_port import CallGatePort
 from app.application.ports.call_provider_port import CallProviderPort
 from app.application.ports.call_repository import CallRepositoryPort
 from app.application.ports.commodity_repository import CommodityRepositoryPort
@@ -22,6 +23,7 @@ class RequestManualCallUseCase:
         sweep_repository: SweepRepositoryPort,
         commodity_repository: CommodityRepositoryPort,
         call_provider: CallProviderPort,
+        call_gate: CallGatePort,
         realtime_event_bus: RealtimeEventBusPort,
         settings: Settings,
     ) -> None:
@@ -30,6 +32,7 @@ class RequestManualCallUseCase:
         self._sweeps = sweep_repository
         self._commodities = commodity_repository
         self._call_provider = call_provider
+        self._call_gate = call_gate
         self._realtime_event_bus = realtime_event_bus
         self._settings = settings
 
@@ -53,9 +56,10 @@ class RequestManualCallUseCase:
             )
         )
 
-        await dispatch_call_chunk(
+        call_task = await dispatch_call_chunk(
             self._calls,
             self._call_provider,
+            self._call_gate,
             commodity_name=commodity.name,
             facilities=[facility],
             sweep_id=sweep.id,
@@ -63,7 +67,8 @@ class RequestManualCallUseCase:
             attempt_number=1,
             demo_redirect_numbers=self._settings.CALL_DEMO_REDIRECT_NUMBERS,
         )
-        await self._sweeps.update_status(sweep.id, SweepStatus.IN_PROGRESS)
+        next_status = SweepStatus.IN_PROGRESS if call_task is not None else SweepStatus.COMPLETED
+        await self._sweeps.update_status(sweep.id, next_status)
         await publish_sweep_status_event(
             self._realtime_event_bus, self._sweeps, self._calls, sweep.id
         )

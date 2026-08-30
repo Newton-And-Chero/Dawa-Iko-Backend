@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.page import PageParams
+from app.application.ports.call_gate_port import CallGatePort
 from app.application.ports.call_provider_port import CallProviderPort
 from app.application.ports.realtime_event_bus_port import RealtimeEventBusPort
 from app.core.config import Settings, get_settings
@@ -15,6 +16,7 @@ from app.domain.entities.user import User
 from app.domain.enums import UserRole
 from app.infrastructure.cache.redis import get_redis
 from app.infrastructure.call_e.factory import build_call_provider
+from app.infrastructure.call_e.redis_call_gate import RedisCallGate
 from app.infrastructure.db.repositories.user_repository import SqlAlchemyUserRepository
 from app.infrastructure.db.session import get_session
 from app.infrastructure.realtime.event_bus import RealtimeEventBus
@@ -53,6 +55,10 @@ def require_role(*roles: UserRole) -> Callable[..., Coroutine[Any, Any, User]]:
 
 def get_call_provider(settings: Settings = Depends(get_settings)) -> CallProviderPort:
     return build_call_provider(settings)
+
+
+def get_call_gate(settings: Settings = Depends(get_settings)) -> CallGatePort:
+    return RedisCallGate(get_redis(), settings)
 
 
 def get_realtime_event_bus() -> RealtimeEventBusPort:

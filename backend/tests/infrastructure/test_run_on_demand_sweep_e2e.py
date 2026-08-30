@@ -9,6 +9,7 @@ from app.domain.enums import CommodityCategory, FacilitySource, FacilityType, Sw
 from app.domain.value_objects.geography_scope import CountyScope
 from app.infrastructure.cache.redis import get_redis
 from app.infrastructure.call_e.mock_calle_adapter import MockCallEAdapter
+from app.infrastructure.call_e.redis_call_gate import RedisCallGate
 from app.infrastructure.db.repositories.call_repository import SqlAlchemyCallRepository
 from app.infrastructure.db.repositories.commodity_repository import SqlAlchemyCommodityRepository
 from app.infrastructure.db.repositories.facility_repository import SqlAlchemyFacilityRepository
@@ -44,13 +45,15 @@ async def test_sweep_completes_once_all_mock_webhooks_land(db_session: AsyncSess
     async with AsyncClient(transport=transport, base_url="http://test") as http_client:
         adapter = MockCallEAdapter(http_client=http_client, webhook_delay_seconds=0.01, seed=7)
 
+        settings = Settings(MAX_RECIPIENTS_PER_TASK=50)
         use_case = RunOnDemandSweepUseCase(
             geography_resolver=PostGISGeographyResolver(db_session),
             call_repository=SqlAlchemyCallRepository(db_session),
             sweep_repository=SqlAlchemySweepRepository(db_session),
             commodity_repository=SqlAlchemyCommodityRepository(db_session),
             call_provider=adapter,
-            settings=Settings(MAX_RECIPIENTS_PER_TASK=50),
+            call_gate=RedisCallGate(get_redis(), settings),
+            settings=settings,
             realtime_event_bus=RealtimeEventBus(get_redis()),
         )
 

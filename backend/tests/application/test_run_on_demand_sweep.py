@@ -18,6 +18,7 @@ from app.domain.enums import (
 )
 from app.domain.value_objects.geography_scope import CountyScope
 from tests.application.fakes import (
+    FakeCallGate,
     FakeCallProvider,
     FakeGeographyResolver,
     InMemoryCallRepository,
@@ -52,6 +53,7 @@ def setup() -> dict:
         "calls": calls,
         "sweeps": sweeps,
         "call_provider": call_provider,
+        "call_gate": FakeCallGate(),
     }
 
 
@@ -64,6 +66,7 @@ def _use_case(
         sweep_repository=setup["sweeps"],
         commodity_repository=setup["commodities"],
         call_provider=setup["call_provider"],
+        call_gate=setup["call_gate"],
         settings=settings,
         realtime_event_bus=InMemoryRealtimeEventBus(),
     )
@@ -94,6 +97,25 @@ async def test_dispatch_creates_sweep_and_call_rows(setup: dict) -> None:
     assert len(calls) == 3
     assert all(c.status == CallStatus.QUEUED for c in calls)
     assert all(c.provider_call_id is not None for c in calls)
+
+
+async def test_disabled_call_engine_completes_the_sweep_with_no_calls(setup: dict) -> None:
+    setup["call_gate"] = FakeCallGate(enabled=False)
+    commodity = await setup["commodities"].add(
+        Commodity(name="Carbetocin", category=CommodityCategory.ESSENTIAL_MEDICINE)
+    )
+    facilities = [_facility(i) for i in range(3)]
+    use_case = _use_case(setup, facilities, Settings(MAX_RECIPIENTS_PER_TASK=50))
+
+    sweep_id = await use_case.execute(
+        commodity_id=commodity.id, geography=CountyScope(county="Kirinyaga")
+    )
+
+    sweep = await setup["sweeps"].get_by_id(sweep_id)
+    assert sweep is not None
+    assert sweep.status == SweepStatus.COMPLETED
+    assert await setup["calls"].list_by_sweep_id(sweep_id) == []
+    assert setup["call_provider"].calls == []
 
 
 async def test_chunking_produces_multiple_place_call_invocations_with_distinct_keys(

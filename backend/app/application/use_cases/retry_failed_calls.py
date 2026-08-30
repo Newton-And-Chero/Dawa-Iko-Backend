@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from app.application.ports.call_gate_port import CallGatePort
 from app.application.ports.call_provider_port import CallProviderPort
 from app.application.ports.call_repository import CallRepositoryPort
 from app.application.ports.commodity_repository import CommodityRepositoryPort
@@ -25,6 +26,7 @@ class RetryFailedCallsUseCase:
         sweep_repository: SweepRepositoryPort,
         commodity_repository: CommodityRepositoryPort,
         call_provider: CallProviderPort,
+        call_gate: CallGatePort,
         settings: Settings,
     ) -> None:
         self._calls = call_repository
@@ -32,9 +34,13 @@ class RetryFailedCallsUseCase:
         self._sweeps = sweep_repository
         self._commodities = commodity_repository
         self._call_provider = call_provider
+        self._call_gate = call_gate
         self._settings = settings
 
     async def execute(self, now: datetime | None = None) -> RetryResult:
+        if not await self._call_gate.is_enabled():
+            return RetryResult(retried_count=0)
+
         now = now or datetime.now(UTC)
         all_calls = await self._calls.list_all()
         candidates = [c for c in all_calls if c.status in (CallStatus.NO_ANSWER, CallStatus.FAILED)]
@@ -60,9 +66,10 @@ class RetryFailedCallsUseCase:
                 continue
 
             next_attempt = call.attempt_number + 1
-            await dispatch_call_chunk(
+            call_task = await dispatch_call_chunk(
                 self._calls,
                 self._call_provider,
+                self._call_gate,
                 commodity_name=commodity.name,
                 facilities=[facility],
                 sweep_id=sweep.id,
@@ -70,6 +77,8 @@ class RetryFailedCallsUseCase:
                 attempt_number=next_attempt,
                 demo_redirect_numbers=self._settings.CALL_DEMO_REDIRECT_NUMBERS,
             )
+            if call_task is None:
+                break
             await self._sweeps.update_status(sweep.id, SweepStatus.IN_PROGRESS)
             retried_count += 1
 

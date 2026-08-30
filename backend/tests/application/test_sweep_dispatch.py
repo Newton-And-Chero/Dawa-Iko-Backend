@@ -53,10 +53,15 @@ def test_redirect_normalizes_local_format_numbers() -> None:
     assert phones == ["+254792036343"]
 
 
-def test_fewer_facilities_than_redirect_numbers_keeps_one_to_one() -> None:
-    facs = [_facility("+254700000001")]
+def test_single_facility_dispatch_rotates_across_redirect_numbers() -> None:
+    redirect = ["+254792036343", "+254720168641"]
 
-    kept, phones = _resolve_call_phones(facs, ["+254792036343", "+254720168641"])
+    chosen: set[str] = set()
+    for _ in range(50):
+        kept, phones = _resolve_call_phones([_facility("+254700000001")], redirect)
+        assert len(kept) == 1
+        assert len(phones) == 1
+        assert phones[0] in redirect
+        chosen.add(phones[0])
 
-    assert len(kept) == 1
-    assert phones == ["+254792036343"]
+    assert chosen == set(redirect)

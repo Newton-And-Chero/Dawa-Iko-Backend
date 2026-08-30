@@ -18,6 +18,7 @@ from app.domain.enums import (
 )
 from app.domain.value_objects.geography_scope import CountyScope, geography_scope_to_dict
 from tests.application.fakes import (
+    FakeCallGate,
     FakeCallProvider,
     InMemoryCallRepository,
     InMemoryCommodityRepository,
@@ -48,6 +49,7 @@ def setup() -> dict:
         "sweeps": InMemorySweepRepository(),
         "commodities": InMemoryCommodityRepository(),
         "call_provider": FakeCallProvider(),
+        "call_gate": FakeCallGate(),
     }
 
 
@@ -82,6 +84,7 @@ def _use_case(setup: dict) -> RetryFailedCallsUseCase:
         sweep_repository=setup["sweeps"],
         commodity_repository=setup["commodities"],
         call_provider=setup["call_provider"],
+        call_gate=setup["call_gate"],
         settings=Settings(RETRY_DELAY_HOURS=4, MAX_CALL_ATTEMPTS=3),
     )
 
@@ -120,6 +123,17 @@ async def test_call_at_max_attempts_is_not_retried_and_stays_failed(setup: dict)
 async def test_call_too_recent_is_not_retried_yet(setup: dict) -> None:
     now = datetime(2026, 8, 22, 16, tzinfo=UTC)
     await _seed(setup, attempt_number=1, ended_at=now - timedelta(hours=1))
+
+    result = await _use_case(setup).execute(now=now)
+
+    assert result.retried_count == 0
+    assert len(setup["call_provider"].calls) == 0
+
+
+async def test_nothing_is_retried_while_the_call_engine_is_disabled(setup: dict) -> None:
+    setup["call_gate"] = FakeCallGate(enabled=False)
+    now = datetime(2026, 8, 22, 16, tzinfo=UTC)
+    await _seed(setup, attempt_number=1, ended_at=now - timedelta(hours=10))
 
     result = await _use_case(setup).execute(now=now)
 

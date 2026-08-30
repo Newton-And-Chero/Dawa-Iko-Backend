@@ -30,6 +30,7 @@ failure modes, flows) the raw schema doesn't carry.
    - [Commodities](#commodities)
    - [Sweeps](#sweeps)
    - [Calls](#calls)
+   - [Call engine (on/off switch)](#call-engine-onoff-switch)
    - [Availability Results](#availability-results)
    - [Escalations](#escalations)
    - [Subscribers](#subscribers)
@@ -262,7 +263,6 @@ it** — a naive `error.detail` render will break on one of the two shapes.
 | `401` | Missing/invalid/expired token, or the user behind it no longer exists | Any protected route |
 | `403` | Valid token, insufficient role | Any role-gated route |
 | `404` | Resource doesn't exist | Any `{id}` lookup, or `POST /sweeps/query` with an unresolvable commodity name |
-| `409` | Conflict — a state the request can't be applied to | Webhook receiver only (unknown `call_id`) |
 | `422` | Validation failure — either a malformed request body/query (framework-level) or a domain rule violation (e.g. editing a facility with bad data) | Any `POST`/`PATCH`, plus `GET /analytics/export` missing a required param for the chosen report |
 | `429` | Rate limit exceeded | `POST /sweeps/query` only |
 
@@ -288,6 +288,10 @@ Retry-After: 43
 
 `Retry-After` is the number of seconds until the window resets — use it to
 drive a countdown/backoff in the UI rather than retrying immediately.
+
+The rate limit is independent of the [call engine](#call-engine-onoff-switch)
+switch: with the engine **off**, `POST /v1/sweeps/query` is still counted and
+can still `429`, it just never places a call when it does get through.
 
 ---
 
@@ -578,6 +582,11 @@ Poll `GET /v1/sweeps/{sweep_id}` with this id, or connect to
 `WS /ws/sweeps/{sweep_id}` / `GET /v1/sweeps/{sweep_id}/stream` for live
 updates instead of polling — see [Real-time](#real-time-websocket--sse).
 
+If the [call engine](#call-engine-onoff-switch) is **off**, you still get a
+`202` and a real `sweep_id`, but that sweep is already `completed` on the
+first read: `status: "completed"`, `total_calls: 0`, `matches: []`. The UI
+should surface this ("calling is paused") rather than spinning forever.
+
 **Failure**
 
 | Status | Cause | Body |
@@ -682,7 +691,9 @@ role-gated.
 
 **Body:** identical to `POST /sweeps/query`'s `SweepQueryIn`.
 
-**202 Accepted:** `{"sweep_id": "..."}`.
+**202 Accepted:** `{"sweep_id": "..."}`. Same [call-engine](#call-engine-onoff-switch)
+behavior as `POST /sweeps/query` when calling is off (sweep created already
+`completed`, no calls placed).
 
 **Failure:** same `404`/`422` cases as `POST /sweeps/query`, plus `403` if
 not `analyst+`. (No `429` — this route has no rate limit.)
@@ -752,6 +763,69 @@ Poll/subscribe to this new `sweep_id` the same way as any other sweep.
 
 **Failure:** `404` if `call_id` (or the facility/commodity it references)
 doesn't exist, `403` if not `analyst+`.
+
+When the [call engine](#call-engine-onoff-switch) is **off**, this still
+returns `202` with a `sweep_id`, but the new sweep is created already
+`completed` with `total_calls: 0` — no call is placed.
+
+---
+
+### Call engine (on/off switch)
+
+A single global kill switch for **all** outbound calling. When it's **off**,
+nothing dials — `POST /v1/sweeps/query`, `POST /v1/sweeps/scheduled`,
+`POST /v1/calls/{id}/retry`, and the scheduled/retry background jobs all still
+run and create their `Sweep` row, but that sweep is created already
+`completed` with `total_calls: 0`, `counts_by_status: {}`, and `matches: []`.
+No CALL-E request is made and no call credits are spent.
+
+Use it to keep the system idle between demos and only turn calling on for a
+controlled window (ideally with a TTL so it can't be left on by accident).
+
+- The state is **global** (not per-sweep), shared by the API and the
+  background workers, and held in Redis so it survives a restart.
+- The boot default is `CALLS_ENABLED_DEFAULT` (ships **off**); once any
+  enable/disable call is made, that explicit state wins until changed.
+- Reading the state requires any authenticated role; changing it is
+  `analyst+`.
+
+**`CallEngineState` shape** (returned by all three endpoints):
+
+```json
+{
+  "enabled": false,
+  "expires_at": "2026-08-30T12:20:00+00:00",
+  "default_enabled": false
+}
+```
+
+- `enabled` — whether calls are currently allowed.
+- `expires_at` — ISO timestamp when an enable-with-TTL will auto-revert to
+  disabled, or `null` (disabled, or enabled with no TTL).
+- `default_enabled` — the `CALLS_ENABLED_DEFAULT` boot fallback, for display.
+
+#### `GET /v1/call-engine`
+
+Any authenticated role. **200 OK** — `CallEngineState`.
+
+#### `POST /v1/call-engine/enable` — `analyst+`
+
+**Body** (optional — omit for "on until explicitly disabled")
+
+```json
+{ "ttl_seconds": 1200 }
+```
+
+`ttl_seconds` (int, `1..86400`) auto-disables the engine after that many
+seconds. Out of range → `422`.
+
+**200 OK** — `CallEngineState` (`enabled: true`).
+
+#### `POST /v1/call-engine/disable` — `analyst+`
+
+No body. **200 OK** — `CallEngineState` (`enabled: false`).
+
+**Failure (enable/disable):** `401` no token, `403` if not `analyst+`.
 
 ---
 

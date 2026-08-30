@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from app.application.ports.call_gate_port import CallEngineState
 from app.application.use_cases.list_commodities import CommodityFilter
 from app.application.use_cases.list_escalations import EscalationFilter
 from app.application.use_cases.list_facilities import FacilityFilter
@@ -400,3 +401,22 @@ class FakeNotifier:
             {"channel": channel, "recipient": recipient, "message": message, "metadata": metadata}
         )
         return NotificationResult(channel=channel, recipient=recipient, success=True)
+
+
+class FakeCallGate:
+    def __init__(self, *, enabled: bool = True) -> None:
+        self.enabled = enabled
+
+    async def is_enabled(self) -> bool:
+        return self.enabled
+
+    async def status(self) -> CallEngineState:
+        return CallEngineState(enabled=self.enabled, expires_at=None, default_enabled=False)
+
+    async def enable(self, ttl_seconds: int | None = None) -> CallEngineState:
+        self.enabled = True
+        return await self.status()
+
+    async def disable(self) -> CallEngineState:
+        self.enabled = False
+        return await self.status()

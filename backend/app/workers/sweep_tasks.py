@@ -7,6 +7,7 @@ from app.core.exceptions import NotFoundError
 from app.domain.value_objects.geography_scope import CountyScope
 from app.infrastructure.cache.redis import get_redis
 from app.infrastructure.call_e.factory import build_call_provider
+from app.infrastructure.call_e.redis_call_gate import RedisCallGate
 from app.infrastructure.db.repositories.call_repository import SqlAlchemyCallRepository
 from app.infrastructure.db.repositories.commodity_repository import SqlAlchemyCommodityRepository
 from app.infrastructure.db.repositories.facility_repository import SqlAlchemyFacilityRepository
@@ -32,6 +33,7 @@ async def _run_scheduled_sweep(commodity_keml_code: str, county: str) -> None:
             sweep_repository=SqlAlchemySweepRepository(session),
             commodity_repository=commodity_repository,
             call_provider=build_call_provider(settings),
+            call_gate=RedisCallGate(get_redis(), settings),
             settings=settings,
             realtime_event_bus=RealtimeEventBus(get_redis()),
         )
@@ -52,6 +54,7 @@ async def _retry_failed_calls() -> None:
             sweep_repository=SqlAlchemySweepRepository(session),
             commodity_repository=SqlAlchemyCommodityRepository(session),
             call_provider=build_call_provider(settings),
+            call_gate=RedisCallGate(get_redis(), settings),
             settings=settings,
         )
         await use_case.execute()

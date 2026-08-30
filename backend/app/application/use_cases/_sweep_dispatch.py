@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
+from app.application.ports.call_gate_port import CallGatePort
 from app.application.ports.call_provider_port import CallProviderPort
 from app.application.ports.call_repository import CallRepositoryPort
 from app.application.ports.commodity_repository import CommodityRepositoryPort
@@ -51,6 +52,8 @@ def _resolve_call_phones(
             len(kept),
             len(facilities),
         )
+    if len(kept) == 1:
+        return kept, [redirect[kept[0].id.int % len(redirect)]]
     return kept, redirect[: len(kept)]
 
 
@@ -61,6 +64,7 @@ class SweepDependencies:
     sweep_repository: SweepRepositoryPort
     commodity_repository: CommodityRepositoryPort
     call_provider: CallProviderPort
+    call_gate: CallGatePort
     settings: Settings
     realtime_event_bus: RealtimeEventBusPort
 
@@ -68,6 +72,7 @@ class SweepDependencies:
 async def dispatch_call_chunk(
     call_repository: CallRepositoryPort,
     call_provider: CallProviderPort,
+    call_gate: CallGatePort,
     *,
     commodity_name: str,
     facilities: list[Facility],
@@ -75,7 +80,15 @@ async def dispatch_call_chunk(
     idempotency_key: str,
     attempt_number: int,
     demo_redirect_numbers: list[str] | None = None,
-) -> CallTaskRef:
+) -> CallTaskRef | None:
+    if not await call_gate.is_enabled():
+        logger.warning(
+            "call engine disabled: skipping %d facilities for sweep %s",
+            len(facilities),
+            sweep_id,
+        )
+        return None
+
     facilities, call_phones = _resolve_call_phones(facilities, demo_redirect_numbers)
 
     now = datetime.now(UTC)
@@ -191,10 +204,12 @@ async def dispatch_sweep(
         )
         return sweep.id
 
+    dispatched_any = False
     for index, facility_chunk in enumerate(chunks):
-        await dispatch_call_chunk(
+        call_task = await dispatch_call_chunk(
             deps.call_repository,
             deps.call_provider,
+            deps.call_gate,
             commodity_name=commodity.name,
             facilities=facility_chunk,
             sweep_id=sweep.id,
@@ -202,8 +217,10 @@ async def dispatch_sweep(
             attempt_number=1,
             demo_redirect_numbers=deps.settings.CALL_DEMO_REDIRECT_NUMBERS,
         )
+        dispatched_any = dispatched_any or call_task is not None
 
-    await deps.sweep_repository.update_status(sweep.id, SweepStatus.IN_PROGRESS)
+    next_status = SweepStatus.IN_PROGRESS if dispatched_any else SweepStatus.COMPLETED
+    await deps.sweep_repository.update_status(sweep.id, next_status)
     await publish_sweep_status_event(
         deps.realtime_event_bus, deps.sweep_repository, deps.call_repository, sweep.id
     )

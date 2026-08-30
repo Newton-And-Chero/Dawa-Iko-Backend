@@ -15,7 +15,7 @@ BEAT_SCHEDULE = {
 } | {
     "retry-failed-calls": {
         "task": "app.workers.sweep_tasks.retry_failed_calls_task",
-        "schedule": crontab(minute=0),
+        "schedule": crontab(hour="*/6", minute=0),
     },
     "recompute-facility-reliability": {
         "task": "app.workers.analytics_tasks.recompute_facility_reliability_task",

@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     RETRY_DELAY_HOURS: int = 4
 
     CALL_DEMO_REDIRECT_NUMBERS: list[str] = []
+    CALLS_ENABLED_DEFAULT: bool = False
 
     SMS_MODE: Literal["mock", "live"] = "mock"
     TWILIO_ACCOUNT_SID: str = ""
