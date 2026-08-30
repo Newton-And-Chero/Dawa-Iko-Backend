@@ -64,11 +64,23 @@ class Settings(BaseSettings):
     # as [] in production so real facilities are called.
     CALL_DEMO_REDIRECT_NUMBERS: list[str] = []
 
-    # --- SMS (Africa's Talking) ---
+    # --- SMS (Twilio) ---
     SMS_MODE: Literal["mock", "live"] = "mock"
-    AFRICAS_TALKING_USERNAME: str = ""
-    AFRICAS_TALKING_API_KEY: str = ""
-    AFRICAS_TALKING_SENDER_ID: str = ""
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    # The sender: either a Twilio phone number (E.164, e.g. +15005550006) or,
+    # if set, a Messaging Service SID (starts with "MG..."), which takes
+    # precedence. A trial account has exactly one of each.
+    TWILIO_FROM_NUMBER: str = ""
+    TWILIO_MESSAGING_SERVICE_SID: str = ""
+
+    # --- SMS demo guardrail (hackathon) ---
+    # Mirrors CALL_DEMO_REDIRECT_NUMBERS for notifications. When non-empty, NO
+    # real subscriber number is ever texted: every outbound SMS is delivered to
+    # every number in this list instead (a Twilio trial account can only send
+    # to its own verified numbers). JSON array of E.164 numbers. Leave as [] in
+    # production so real subscribers are notified.
+    SMS_DEMO_REDIRECT_NUMBERS: list[str] = []
 
     # --- Email (subscriber notification_channel=email) ---
     EMAIL_MODE: Literal["mock", "live"] = "mock"

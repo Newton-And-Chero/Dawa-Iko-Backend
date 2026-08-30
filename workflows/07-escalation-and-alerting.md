@@ -4,7 +4,7 @@
 
 ## Goal & Definition of Done
 
-A completed sweep with zero (or below-threshold) availability automatically creates a severity-classified `StockoutAlert`, matched to subscribers watching that geography/commodity, dispatched via SMS (Africa's Talking, real + mock adapter) and webhook, with acknowledge/resolve tracking. A successful on-demand query also immediately returns a patient-facing match (facility, distance, price, hold reference) — this half doesn't need new infrastructure, it's a response-shaping concern on top of Sprint 04/05's existing query path, built here because it's conceptually part of "alerting the right result to the right person."
+A completed sweep with zero (or below-threshold) availability automatically creates a severity-classified `StockoutAlert`, matched to subscribers watching that geography/commodity, dispatched via SMS (Twilio, real + mock adapter) and webhook, with acknowledge/resolve tracking. A successful on-demand query also immediately returns a patient-facing match (facility, distance, price, hold reference) — this half doesn't need new infrastructure, it's a response-shaping concern on top of Sprint 04/05's existing query path, built here because it's conceptually part of "alerting the right result to the right person."
 
 ## Preconditions
 
@@ -18,7 +18,7 @@ app/application/ports/
   notifier_port.py            # NotifierPort(ABC): async def send(channel, recipient, message, metadata) -> NotificationResult
 
 app/infrastructure/notifications/
-  africas_talking_adapter.py   # AfricasTalkingAdapter(NotifierPort) — SMS via Africa's Talking API
+  twilio_sms_adapter.py        # TwilioSmsAdapter(NotifierPort) — SMS via Twilio REST API
   mock_sms_adapter.py            # MockSMSAdapter(NotifierPort) — logs instead of sending
   webhook_notifier.py              # WebhookNotifier(NotifierPort) — POSTs to a subscriber's registered webhook_url
   email_notifier.py                  # (simple SMTP or provider-agnostic adapter; same pattern)
@@ -38,7 +38,7 @@ app/application/use_cases/
 ## Task checklist
 
 - [ ] `NotifierPort` — one method, `send(channel: NotificationChannel, recipient, message, metadata)`, so SMS/email/webhook are interchangeable from the caller's perspective (the concrete adapter chosen per `Subscriber.notification_channel`).
-- [ ] `AfricasTalkingAdapter` — real Africa's Talking SMS integration (`africastalking` Python package or their REST API directly via `httpx`), reading `AFRICAS_TALKING_USERNAME`/`AFRICAS_TALKING_API_KEY` from `Settings`, sender/short-code configurable.
+- [ ] `TwilioSmsAdapter` — real Twilio SMS integration (Twilio's REST API directly via `httpx`, no `twilio` package), reading `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_FROM_NUMBER` from `Settings`. Honours `SMS_DEMO_REDIRECT_NUMBERS` (the notification-side mirror of `CALL_DEMO_REDIRECT_NUMBERS`): when set, every SMS is fanned out to those verified numbers instead of the subscriber.
 - [ ] `MockSMSAdapter` — logs the message (structured log line, and optionally persists to a `sent_notifications` table/list for test assertions) instead of sending; selected via `Settings.SMS_MODE=mock|live`, mock by default per `RULES.md`.
 - [ ] `WebhookNotifier` — POSTs a JSON payload to a subscriber's `webhook_url` (if that's their chosen channel), with a reasonable timeout and no retry storm (a small number of retries with backoff, then give up and log — a failed subscriber webhook must never block other subscribers' notifications).
 - [ ] `domain/services/subscriber_matching.py` — pure function matching a `StockoutAlert`'s commodity+geography against each `Subscriber.watchlist_commodities`/`watchlist_geography`, unit-testable with no DB.

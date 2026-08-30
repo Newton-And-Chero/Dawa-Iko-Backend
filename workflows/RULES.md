@@ -19,7 +19,7 @@ This project is **backend-only** for now. No frontend/dashboard code is in scope
 
 - **DO** give every adapter with a real-world side effect (CALL-E, SMS, KMHFL import) a `Mock*` counterpart implementing the same port, selected via an env var (e.g. `CALL_E_MODE=mock|live`, `SMS_MODE=mock|live`).
 - **DO** default every environment except an explicit production-like one to `mock`. Nobody should place a real phone call or send a real SMS by accident.
-- **DO NOT** call a real external paid API (CALL-E, Africa's Talking) from an automated test, ever. Automated tests only exercise `Mock*` adapters.
+- **DO NOT** call a real external paid API (CALL-E, Twilio) from an automated test, ever. Automated tests only exercise `Mock*` adapters.
 - **DO** label mock/seed data as synthetic everywhere it surfaces — code comments at the seed source, log lines, and any future UI. Never let generated Kenyan facility data be mistaken for a real KMHFL export.
 
 ## Data & migrations

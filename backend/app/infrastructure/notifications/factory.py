@@ -6,9 +6,9 @@ it's a shared instance per process rather than fresh per call."""
 from app.application.ports.notifier_port import NotifierPort
 from app.core.config import Settings
 from app.domain.enums import NotificationChannel
-from app.infrastructure.notifications.africas_talking_adapter import AfricasTalkingAdapter
 from app.infrastructure.notifications.email_notifier import EmailNotifier
 from app.infrastructure.notifications.mock_sms_adapter import MockSMSAdapter
+from app.infrastructure.notifications.twilio_sms_adapter import TwilioSmsAdapter
 from app.infrastructure.notifications.webhook_notifier import WebhookNotifier
 
 _shared_mock_sms_adapter: MockSMSAdapter | None = None
@@ -21,7 +21,7 @@ def _build_sms_notifier(settings: Settings) -> NotifierPort:
         if _shared_mock_sms_adapter is None:
             _shared_mock_sms_adapter = MockSMSAdapter()
         return _shared_mock_sms_adapter
-    return AfricasTalkingAdapter(settings)
+    return TwilioSmsAdapter(settings)
 
 
 def _build_webhook_notifier() -> NotifierPort:

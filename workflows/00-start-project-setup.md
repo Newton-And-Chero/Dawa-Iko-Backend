@@ -79,7 +79,7 @@ Note: `.github/workflows/ci.yml` lives at the **repo root** `.github/`, not insi
 - [ ] Initialize `backend/` as a `uv` project (`uv init`), pin a Python 3.12+ version in `.python-version`.
 - [ ] Add core dependencies via `uv add`: `fastapi`, `uvicorn[standard]`, `pydantic-settings`, `sqlalchemy[asyncio]`, `asyncpg`, `geoalchemy2`, `alembic`, `celery[redis]`, `redis`, `httpx`.
 - [ ] Add dev dependencies via `uv add --dev`: `pytest`, `pytest-asyncio`, `ruff`, `mypy`, `pre-commit`.
-- [ ] Write `app/core/config.py` — a `Settings(BaseSettings)` class reading every env var this project will ever need across all sprints (database URL, Redis URL, `CALLE_API_KEY`, `CALL_E_MODE`, `SMS_MODE`, `AFRICAS_TALKING_*`, JWT secret, `MAX_RECIPIENTS_PER_TASK`, webhook token secret). It's fine for most to be unused until later sprints — declaring them here now means `.env.example` is complete from day one.
+- [ ] Write `app/core/config.py` — a `Settings(BaseSettings)` class reading every env var this project will ever need across all sprints (database URL, Redis URL, `CALLE_API_KEY`, `CALL_E_MODE`, `SMS_MODE`, `TWILIO_*`, JWT secret, `MAX_RECIPIENTS_PER_TASK`, webhook token secret). It's fine for most to be unused until later sprints — declaring them here now means `.env.example` is complete from day one.
 - [ ] Write `.env.example` mirroring every `Settings` field with a placeholder or safe default (`CALL_E_MODE=mock`, `SMS_MODE=mock`).
 - [ ] Write `app/main.py` — FastAPI app factory, CORS middleware (permissive for now, revisit in Sprint 05), mounts `app/api/v1/router.py`, exposes `GET /healthz` returning `{"status": "ok"}`.
 - [ ] Write `app/infrastructure/db/session.py` — async engine + `async_sessionmaker`, reading the DB URL from `Settings`.
