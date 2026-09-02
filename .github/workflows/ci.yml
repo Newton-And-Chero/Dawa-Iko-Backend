@@ -119,4 +119,9 @@ jobs:
           host: ${{ secrets.GCP_SSH_HOST }}
           username: ${{ secrets.GCP_SSH_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
-          script: /opt/calle/deploy.sh ${{ github.sha }}
+          script: |
+            set -euo pipefail
+            cd /opt/calle
+            git fetch --depth 1 origin main
+            git reset --hard origin/main
+            ./deploy.sh ${{ github.sha }}
