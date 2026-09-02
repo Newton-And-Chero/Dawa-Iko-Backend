@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     PUBLIC_QUERY_RATE_WINDOW_SECONDS: int = 60
 
     CORS_ALLOW_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ALLOW_ORIGIN_REGEX: str = ""
 
     @model_validator(mode="after")
     def _refuse_placeholder_jwt_secret_in_production(self) -> "Settings":

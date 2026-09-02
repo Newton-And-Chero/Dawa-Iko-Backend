@@ -1,0 +1,41 @@
+services:
+  db:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+
+  redis:
+    ports: !reset []
+
+  api:
+    build: !reset null
+    image: ${API_IMAGE:?set API_IMAGE}
+    pull_policy: always
+    ports: !reset []
+
+  worker:
+    build: !reset null
+    image: ${API_IMAGE:?set API_IMAGE}
+    pull_policy: always
+
+  beat:
+    build: !reset null
+    image: ${API_IMAGE:?set API_IMAGE}
+    pull_policy: always
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  caddy_data:
+  caddy_config:
