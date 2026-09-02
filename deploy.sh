@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_DIR=/opt/calle
 IMAGE_TAG="${1:?usage: deploy.sh <image-tag>}"
-IMAGE_REPO="ghcr.io/newton-and-chero/call-e-docs"
+IMAGE_REPO="ghcr.io/newton-and-chero/dawa-iko-backend"
 
 cd "$REPO_DIR"
 git fetch --depth 1 origin main
